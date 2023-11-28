@@ -209,7 +209,7 @@ header:
 -include $(DEPS) $(DEPS_MAIN)
 $(NAME):	${OBJS} ${OBJ_MAIN}
 			@$(call display_progress_bar)
-			@$(call run_and_test,$(CC) $(CFLAGS) $(DFLAGS) -I$(INCLUDE_PATH) -o $@ ${COMPIL} ${OBJS} ${OBJ_MAIN}) # ${COMPIL} SERT QUE POUR MINILIBX
+			@$(call run_and_test,$(CC) $(CFLAGS) $(DFLAGS) -I$(INCLUDE_PATH) -o $@ ${OBJS} ${OBJ_MAIN}) # ${COMPIL} SERT QUE POUR MINILIBX
 			@printf "\n$(WARN_COLOR)Project Ready :)\n"
 
 setup:
