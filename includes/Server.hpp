@@ -60,12 +60,12 @@ void Server::setSocket()
 	{
 		printf("Bind on port 4242 with %d", _sockFD);
 	}
-	// close(_sockFD);
 	if (_servinfo == NULL)
 	{
 		printf("could not bind()");
 	}
-	// freeaddrinfo(servinfo);
+	// close(_sockFD);
+	// freeaddrinfo(_servinfo);
 }
 
 #endif

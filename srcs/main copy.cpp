@@ -12,9 +12,9 @@
 
 #include "Parsor.hpp"
 #include "Server.hpp"
-#include <netdb.h>
-#include <fcntl.h>
-#include <unistd.h>
+// #include <netdb.h>
+// #include <fcntl.h>
+// #include <unistd.h>
 // #include <sys/socket.h>
 // #include <sys/types.h>
 

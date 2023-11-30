@@ -22,7 +22,7 @@ SRCS_PATH		=	./srcs
 
 INCLUDE_PATH	=	./includes
 
-SRCS			=	\
+SRCS			=	Ft.cpp Parsor.cpp Server.cpp
 
 MAIN			=	main.cpp
 

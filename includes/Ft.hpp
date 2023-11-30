@@ -14,7 +14,7 @@
 
 #include <iostream>
 
-#define ERR_CONF_EXTRA_BR "Error config file: extra breaket line @."
+#define ERR_CONF_EXTRA_BR "Error config file: extra bracket line @."
 #define ERR_CONF_MISSING_BR "Error config file: missing closing bracket to match this '{' in the line @."
 #define ERR_CONF_MISSING_PONCT "Error config file: missing ponctuation line @."
 
