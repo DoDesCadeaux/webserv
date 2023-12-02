@@ -35,6 +35,7 @@ private:
 
 public:
 	Server();
+	~Server();
 	void 	setSocket();
 	void	addFd(int fd);
 	// listen

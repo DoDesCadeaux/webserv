@@ -15,6 +15,7 @@
 Server::Server(){
     FD_ZERO(&_allfds);
 }
+Server::~Server(){}
 
 void Server::setSocket()
 {
@@ -22,7 +23,7 @@ void Server::setSocket()
 	int				server_fd;
 	int 			yes = 1;
 
-     char port1[] = "8080";
+     char port1[] = "1918";
      char port2[] = "8081";
     _ports.push_back(port1);
     _ports.push_back(port2);
