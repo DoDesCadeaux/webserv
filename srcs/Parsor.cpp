@@ -50,7 +50,7 @@ int Parsor::parse(std::string configName)
     std::string line;
     std::ifstream file;
     std::vector<int> brackets;
-    int itLine = 0;
+    int itLine = 0, begin;
     char last;
 
     file.open(configName);
@@ -60,7 +60,7 @@ int Parsor::parse(std::string configName)
     while (std::getline(file, line)){
         itLine++;
         last = findEnd(line);
-
+        
         if (line[line.find_first_not_of(" \t", 0)] == '#' || last == '\0' || last == 4)
             continue;
         //Manque fonction check toute la ligne du debut jusqu'au last

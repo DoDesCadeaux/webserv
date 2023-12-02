@@ -17,18 +17,26 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include "Parsor.hpp"
+#include <list>
+#include <algorithm>
+
+#define PORT "7812"
 
 class Server
 {
 private:
-	int _sockFD;
-	struct addrinfo *_servinfo;
-	std::vector<size_t> _ports;
-	// size_t workers;
-	// int _maxFD;
+	std::list<char *>	_ports;
+	std::list<int>		_listfds;
+	fd_set				_allfds;
+	// fd_set				_readfds;
+	// fd_set				_writefds;	
+	// container? workers;
+	int 				_maxfd;
 
 public:
-	void setSocket();
+	Server();
+	void 	setSocket();
+	void	addFd(int fd);
 	// listen
 	// accept connexion
 	// kill conmnexion
@@ -37,40 +45,5 @@ public:
 	// send
 	// update fd_set
 };
-
-void Server::setSocket()
-{
-	int status;
-	struct addrinfo hints;
-
-	// Pour etre sur que hint est bien vide
-	memset(&hints, 0, sizeof hints);
-	// Famille d'addressage renvoyée -> gere ipv4 et 6
-	hints.ai_family = AF_UNSPEC;
-	// Type de socket
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
-
-	status = getaddrinfo(NULL, "4242", &hints, &_servinfo);
-
-	if (status != 0){
-		printf("getaddrinfo: %s", gai_strerror(status));
-	}
-
-	_sockFD = socket(_servinfo->ai_family, _servinfo->ai_socktype, _servinfo->ai_protocol);
-	if (_sockFD == -1)
-		printf("echec socket");
-	fcntl(_sockFD, F_SETFL, O_NONBLOCK);
-	if (bind(_sockFD, _servinfo->ai_addr, _servinfo->ai_addrlen) == 0)
-	{
-		printf("Bind on port 4242 with %d", _sockFD);
-	}
-	if (_servinfo == NULL)
-	{
-		printf("could not bind()");
-	}
-	// close(_sockFD);
-	// freeaddrinfo(_servinfo);
-}
 
 #endif
