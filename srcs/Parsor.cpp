@@ -63,6 +63,7 @@ int Parsor::parse(std::string configName)
 
         if (line[line.find_first_not_of(" \t", 0)] == '#' || last == '\0' || last == 4)
             continue;
+        //Manque fonction check toute la ligne du debut jusqu'au last
         if (last == '{'){
             brackets.push_back(itLine);
             continue;

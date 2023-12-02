@@ -23,6 +23,9 @@ class Server
 private:
 	int _sockFD;
 	struct addrinfo *_servinfo;
+	std::vector<size_t> _ports;
+	// size_t workers;
+	// int _maxFD;
 
 public:
 	void setSocket();
@@ -30,12 +33,15 @@ public:
 	// accept connexion
 	// kill conmnexion
 	// run server avec le select
+	// revc
+	// send
+	// update fd_set
 };
 
 void Server::setSocket()
 {
 	int status;
-	struct addrinfo hints, *rp;
+	struct addrinfo hints;
 
 	// Pour etre sur que hint est bien vide
 	memset(&hints, 0, sizeof hints);
@@ -47,8 +53,7 @@ void Server::setSocket()
 
 	status = getaddrinfo(NULL, "4242", &hints, &_servinfo);
 
-	if (status != 0)
-	{
+	if (status != 0){
 		printf("getaddrinfo: %s", gai_strerror(status));
 	}
 

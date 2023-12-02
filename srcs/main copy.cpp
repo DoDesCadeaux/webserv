@@ -67,5 +67,6 @@ int main(int argc, char **argv){
     // if (connect(sockFD, rp->ai_addr, rp->ai_addrlen) != -1)
     //     printf("connect ok");
     // }
+// setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
     return 0;
 }
