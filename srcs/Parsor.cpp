@@ -50,7 +50,7 @@ int Parsor::parse(std::string configName)
     std::string line;
     std::ifstream file;
     std::vector<int> brackets;
-    int itLine = 0, begin;
+    int itLine = 0;
     char last;
 
     file.open(configName);

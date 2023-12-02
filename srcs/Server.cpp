@@ -22,8 +22,8 @@ void Server::setSocket()
 	int				server_fd;
 	int 			yes = 1;
 
-     char port1[] = "4242";
-     char port2[] = "1919";
+     char port1[] = "8080";
+     char port2[] = "8081";
     _ports.push_back(port1);
     _ports.push_back(port2);
 
@@ -60,6 +60,7 @@ void Server::setSocket()
 
 		//Connection du socket au port
 		if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0) {
+			std::cout << *it << ": is used port" << std::endl;
 			perror("Bind");
 			exit(EXIT_FAILURE);
 		}
