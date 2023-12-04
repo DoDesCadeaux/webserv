@@ -15,6 +15,7 @@
 Server::Server() {
 	FD_ZERO(&_allfds);
 }
+
 Server::~Server() {}
 
 void Server::setSocket() {
@@ -74,10 +75,10 @@ void Server::setSocket() {
 		//Free du addrinfo
 		freeaddrinfo(servinfo);
 		addFd(server_fd);
+		//Set des fd socket en provenance des sockets pour les differencier plus tard
 		FD_SET(server_fd, &_sock);
 		printf("connexion au port %s avec les socket %d\n",  *it, server_fd);
 	}
-
 	//QUID DU close(_sockFD);
 }
 
@@ -90,15 +91,17 @@ void Server::addFd(int fd) {
 }
 
 void Server::run() {
-	_readfds = _allfds;
-	_writefds = _allfds;
 	struct timeval time;
-	time.tv_sec = 3;
-	time.tv_usec = 500000;
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size;
+	int res, newfd;
 
-	int res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &time);
+	_readfds = _allfds;
+	_writefds = _allfds;
+	time.tv_sec = 3;
+	time.tv_usec = 500000;
+
+	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &time);
 
 	if(res == 0)
 		std::cout << "timeout" <<std::endl;
@@ -109,7 +112,7 @@ void Server::run() {
 			if (FD_ISSET(fd, &_allfds)) {
 				if (FD_ISSET(fd, &_readfds) && FD_ISSET(fd, &_sock)) {
 					addr_size = sizeof their_addr;
-					int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
+					newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
 					printf("new connection accepted with sock : %d\n", newfd);
 					addFd(newfd);
 				}
@@ -125,8 +128,3 @@ void Server::run() {
 		}
 	}
 }
-
-
-
-
-

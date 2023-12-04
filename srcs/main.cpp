@@ -8,10 +8,10 @@ int main(int argc, char **argv) {
 	if (!Parsor::parse(fileConf))
 		return (EXIT_FAILURE);
 
-    Server server;
-    server.setSocket();
+	Server server;
+	server.setSocket();
 
-	while (1){
+	while (true) {
 		server.run();
 	}
 	return 0;

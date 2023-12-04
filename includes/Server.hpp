@@ -32,7 +32,7 @@ private:
 	fd_set							_readfds;
 	fd_set							_writefds;
 	int 							_maxfd;
-//	std::vector<int>				_clients;
+	//	std::vector<int>				_clients;
 	// container? workers; => List de res de socket()
 	// container? client: => List de res de accept()
 
