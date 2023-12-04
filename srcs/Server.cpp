@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Server.hpp"
+#include "../includes/Server.hpp"
 
 Server::Server() {
 	FD_ZERO(&_allfds);
