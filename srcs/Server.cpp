@@ -23,8 +23,8 @@ void Server::setSocket()
 	int				server_fd;
 	int 			yes = 1;
 
-     char port1[] = "1918";
-     char port2[] = "8081";
+    char port1[] = "1918";
+    char port2[] = "8081";
     _ports.push_back(port1);
     _ports.push_back(port2);
 
@@ -66,6 +66,11 @@ void Server::setSocket()
 			exit(EXIT_FAILURE);
 		}
 
+		if(listen(server_fd, 2) < 0){
+			perror("Listen");
+			exit(EXIT_FAILURE);
+		}
+
 		//Free du addrinfo
 		freeaddrinfo(servinfo);
         addFd(server_fd);
@@ -80,6 +85,45 @@ void Server::addFd(int fd){
     _listfds.push_back(fd);
     _listfds.sort();
     _maxfd = _listfds.back();
+}
+
+void Server::run(){
+	_readfds = _allfds;
+	_writefds = _allfds;
+	struct timeval time;
+	time.tv_sec=10;
+
+	//Ajouter boucle workers
+	int res = select(_maxfd + 1, &_readfds, &_writefds, NULL, NULL);
+	if(res == 0){
+		std::cout << "timeout" <<std::endl;
+	}
+	if (res != -1 ){
+		std::cout << "error" << std::endl;
+	}
+	else(
+		/*
+			DEUX BOUCLES
+				Pour tout les serveur (servinfo)
+					regarde si res est dans read avec FD_SET
+						oui : on fait un connect
+						non : passe au suivant
+				Pour tous les clients 
+					regarde si res est dans read avec FD_SET
+						oui: recv()
+						non : passe au suivant + 1 pour le non
+					regarde si res est dans write avec FD_SET
+						oui: send()
+						non: passe au suivant + 1 pour le non
+					si non = 2 => disconect client
+		*/
+		
+		//regarde si res est dans read avec FD_SET
+			//Soit on doit faire un connect
+			//Soit on doit faire un recv()
+		//regarde si res est dans Write avec FD_SET
+			//On fait un send()
+	)
 }
 
 

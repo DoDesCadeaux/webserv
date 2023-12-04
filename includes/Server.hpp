@@ -28,18 +28,19 @@ private:
 	std::list<char *>	_ports;
 	std::list<int>		_listfds;
 	fd_set				_allfds;
-	// fd_set				_readfds;
-	// fd_set				_writefds;	
-	// container? workers;
+	fd_set				_readfds;
+	fd_set				_writefds;	
 	int 				_maxfd;
+	// container? workers; => List de res de socket()
+	// container? client: => List de res de accept()
 
 public:
 	Server();
 	~Server();
 	void 	setSocket();
 	void	addFd(int fd);
-	// listen
-	// accept connexion
+	void	run();
+	// void	accept();
 	// kill conmnexion
 	// run server avec le select
 	// revc
