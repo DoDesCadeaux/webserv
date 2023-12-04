@@ -10,5 +10,9 @@ int main(int argc, char **argv) {
 
     Server server;
     server.setSocket();
+
+	while (1){
+		server.run();
+	}
 	return 0;
 }

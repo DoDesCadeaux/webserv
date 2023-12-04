@@ -19,18 +19,20 @@
 #include "Parsor.hpp"
 #include <list>
 #include <algorithm>
+#include <map>
 
-#define PORT "7812"
 
 class Server
 {
 private:
-	std::list<char *>	_ports;
-	std::list<int>		_listfds;
-	fd_set				_allfds;
-	fd_set				_readfds;
-	fd_set				_writefds;	
-	int 				_maxfd;
+	std::list<char *>				_ports;
+	std::list<int>					_listfds;
+	fd_set							_sock;
+	fd_set							_allfds;
+	fd_set							_readfds;
+	fd_set							_writefds;
+	int 							_maxfd;
+//	std::vector<int>				_clients;
 	// container? workers; => List de res de socket()
 	// container? client: => List de res de accept()
 

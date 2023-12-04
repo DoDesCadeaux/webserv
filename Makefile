@@ -10,7 +10,7 @@ DFLAGS	= -MMD -MF $(@:.o=.d)
 AUTHOR	= dduraku pamartin tverdood
 DATE	= dd/mm/yyyy
 
-NOVISU 	= 0 # 1 = no progress bar usefull when tty is not available
+NOVISU 	= 1 # 1 = no progress bar usefull when tty is not available
 
 ################################################################################
 #                                 PROGRAM'S SRCS                               #
