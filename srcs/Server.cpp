@@ -89,6 +89,64 @@ void Server::addFd(int fd) {
 	_maxfd = _listfds.back();
 }
 
+int	Server::sendAll(int fd) {
+	int	total = 0;
+	int	bytesleft;
+	int	n;
+
+	//Ouvrir le fichier index.html
+	std::ifstream htmlFile("index.html");
+	//Envoyer le contenu du fichier index.html dans cette variable
+	std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
+	// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
+	std::string httpResponse = "HTTP/1.1 200 OK\r\n"
+			"Content-Type: text/html\r\n"
+			"Content-Length: " + std::to_string(htmlContent.size()) + "\r\n"
+			"\r\n" + htmlContent;
+	bytesleft = httpResponse.size();
+	while (total < bytesleft) {
+		n = send(fd, httpResponse.c_str(), httpResponse.size(), 0);
+		if (n == -1)
+			break ;
+		total += n;
+		bytesleft -= n;
+	}
+	// Close le fichier index.html
+	htmlFile.close();
+	return (n==-1 ? -1 : 0);
+}
+
+// Lis une requête entrante sur le socket
+// Continuer à appeler recv() jusqu'à ce que tout le contenu soit lu ou qu'il y ait une erreur/fermeture de la connexion
+// Analyse ensuite la requête reçue
+// Retourne la valeur de l'erreur ou le nombre d'octets lus lors du dernier recv()
+int	Server::recvAll(int fd) {
+	ssize_t	bytesRead = BUFFER_SIZE - 1;
+	char	tmp[BUFFER_SIZE];
+
+	_buff.clear();
+	//Lire les données entrantes jusqu'à ce qu'il n'y ait plus rien à lire
+	while (bytesRead == BUFFER_SIZE - 1) {
+		//Avec MSG_DONTWAIT recv ne bloquera pas la socket s'il n'y a rien à lire
+		bytesRead = recv(fd, tmp, BUFFER_SIZE - 1, MSG_DONTWAIT);
+		if (bytesRead > 0) {
+			tmp[bytesRead] = '\0';
+			_buff += tmp;
+		}
+		else if (bytesRead == 0) {
+			std::cout << "Connection was closed" << std::endl;
+			return 0;
+		}
+		else
+			return (-1);
+	}
+	if (_buff.size() > 0) {
+		Request req(_buff);
+		_req = req;
+	}
+	return (bytesRead);
+}
+
 void Server::run() {
 	struct timeval time;
 	struct sockaddr_storage their_addr;
@@ -108,42 +166,36 @@ void Server::run() {
 		std::cout << "error" << std::endl;
 	else {
 		for (int fd = 0; fd <= _maxfd; ++fd) {
+			//Le fd est-il lié à notre programme?
 			if (FD_ISSET(fd, &_allfds)) {
+				//Un nouveau client veut créer une connexion
 				if (FD_ISSET(fd, &_readfds) && FD_ISSET(fd, &_sock)) {
 					addr_size = sizeof their_addr;
 					newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
 					printf("new connection accepted with sock : %d\n", newfd);
 					addFd(newfd);
 				}
+				//Un client existent nous fait une requête (GET)
 				else if (FD_ISSET(fd, &_readfds) && !FD_ISSET(fd, &_sock)) {
-					//Ouvrir le fichier index.html
-					std::ifstream htmlFile("index.html");
-					//Envoyer le contenu du fichier index.html dans cette variable
-					std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
-					// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
-					std::string httpResponse = "HTTP/1.1 200 OK\r\n"
-						   "Content-Type: text/html\r\n"
-						   "Content-Length: " + std::to_string(htmlContent.size()) + "\r\n"
-						   "\r\n" + htmlContent;
-
-					//Envoyer le fichier html avec le bon code HTTP -> (Header du protocole)
-					ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.size(), 0);
-					//Gestion du cas où l'envoi à fail
-					if (bytesSent == -1) {
-						perror("send");
+					if (sendAll(fd) == -1) {
+						perror("sendAll()");
 						exit(EXIT_FAILURE);
 					}
-					//elseif (bytesSent < htmlContent.size) {} //Verifier si seulement une partie à été envoyée
-
-					// Close le fichier index.html
-					htmlFile.close();
-					printf("en attente de lecture\n");
 				}
+				//Un client existent nous envoie une requête (PUSH)
 				else if (FD_ISSET(fd, &_writefds)) {
-					printf("en attente d'ecriture\n");
-					//send();
+					if (recvAll(fd) == -1) {
+						perror("recvAll()");
+						exit(EXIT_FAILURE);
+					}
+					//printf("en attente d'ecriture\n");
 				}
 			}
 		}
 	}
+// TO DO :
+// if a recv/send error occured,
+// we need to close the active connection,
+// remove it from the master_set and decrease the value of
+// max socket in the master set
 }
