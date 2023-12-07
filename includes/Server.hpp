@@ -49,7 +49,7 @@ class Server
 		void 	setSocket();
 		void	addFd(int fd);
 		void	run();
-		int		sendAll(int fd);
+		int		sendAll(int fd,  const std::string &httpResponse, unsigned int *len);
 		int		recvAll(int fd);
 		// void	accept();
 		// kill conmnexion

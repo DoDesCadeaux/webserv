@@ -88,34 +88,6 @@ void Server::addFd(int fd) {
 	_listfds.sort();
 	_maxfd = _listfds.back();
 }
-
-int	Server::sendAll(int fd) {
-	int	total = 0;
-	int	bytesleft;
-	int	n;
-
-	//Ouvrir le fichier index.html
-	std::ifstream htmlFile("index.html");
-	//Envoyer le contenu du fichier index.html dans cette variable
-	std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
-	// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
-	std::string httpResponse = "HTTP/1.1 200 OK\r\n"
-			"Content-Type: text/html\r\n"
-			"Content-Length: " + std::to_string(htmlContent.size()) + "\r\n"
-			"\r\n" + htmlContent;
-	bytesleft = httpResponse.size();
-	while (total < bytesleft) {
-		n = send(fd, httpResponse.c_str(), httpResponse.size(), 0);
-		if (n == -1)
-			break ;
-		total += n;
-		bytesleft -= n;
-	}
-	// Close le fichier index.html
-	htmlFile.close();
-	return (n==-1 ? -1 : 0);
-}
-
 // Lis une requête entrante sur le socket
 // Continuer à appeler recv() jusqu'à ce que tout le contenu soit lu ou qu'il y ait une erreur/fermeture de la connexion
 // Analyse ensuite la requête reçue
@@ -145,6 +117,34 @@ int	Server::recvAll(int fd) {
 		_req = req;
 	}
 	return (bytesRead);
+}
+
+int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len) {
+	unsigned int total = 0;
+	int bytesleft = *len;
+	int n;
+	int retries = 0;
+
+	while (total < *len) {
+		n = send(fd, httpResponse.c_str() + total, bytesleft, 0);
+		if (n == -1) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				// Le buffer est plein, attendre un peu avant de réessayer
+				usleep(20000);
+				retries++;
+				if (retries > 5) { // Limiter le nombre de réessais pour éviter une boucle infinie
+					break;
+				}
+				continue;
+			}
+		}
+		total += n;
+		bytesleft -= n;
+		retries = 0; // Réinitialiser le compteur de réessais après un envoi réussi
+	}
+
+	*len = total;
+	return (n == -1 ? -1 : 0);
 }
 
 void Server::run() {
@@ -177,10 +177,23 @@ void Server::run() {
 				}
 				//Un client existent nous fait une requête (GET)
 				else if (FD_ISSET(fd, &_readfds) && !FD_ISSET(fd, &_sock)) {
-					if (sendAll(fd) == -1) {
-						perror("sendAll()");
+					//Ouvrir le fichier index.html
+					std::ifstream htmlFile("index.html");
+					//Envoyer le contenu du fichier index.html dans cette variable
+					std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
+					// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
+					std::string httpResponse = "HTTP/1.1 200 OK\r\n"
+							"Content-Type: text/html\r\n"
+							"Content-Length: " + std::to_string(htmlContent.size()) + "\r\n"
+							"\r\n" + htmlContent;
+					unsigned int len = strlen(httpResponse.c_str());
+					if (sendAll(fd, httpResponse, &len) == -1) {
+						perror("sendall");
+						printf("We only sent %d bytes because of the error!\n", len);
 						exit(EXIT_FAILURE);
 					}
+					htmlFile.close();
+					std::cout << errno << std::endl;
 				}
 				//Un client existent nous envoie une requête (PUSH)
 				else if (FD_ISSET(fd, &_writefds)) {
