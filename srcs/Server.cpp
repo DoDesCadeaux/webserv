@@ -28,11 +28,9 @@ void Server::setSocket() {
 	_ports.push_back(port1);
 	_ports.push_back(port2);
 
-
-
 	for (std::list<char *>::iterator it = _ports.begin(); it != _ports.end(); it++) {
 		//On s'assure que la structure est entierement vide
-		memset(&hint, 0, sizeof(hint));
+		memset(&hint, 0, sizeof(hint)); //Pas oublier de free quand un truc fail après
 		//Parametrage de la structure tampon (hint)
 		hint.ai_family = AF_UNSPEC;                //Quelque soit l'ipv
 		hint.ai_socktype = SOCK_STREAM;            //precise type socket (streaming)
@@ -60,7 +58,7 @@ void Server::setSocket() {
 			exit(1);
 		}
 
-		//Connection du socket au port
+		//Attribution du socket au port
 		if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0) {
 			std::cout << *it << ": is used port" << std::endl;
 			perror("Bind");
@@ -80,6 +78,7 @@ void Server::setSocket() {
 		printf("connexion au port %s avec les socket %d\n",  *it, server_fd);
 	}
 	//QUID DU close(_sockFD);
+	//free le memset
 }
 
 
@@ -117,8 +116,28 @@ void Server::run() {
 					addFd(newfd);
 				}
 				else if (FD_ISSET(fd, &_readfds) && !FD_ISSET(fd, &_sock)) {
+					//Ouvrir le fichier index.html
+					std::ifstream htmlFile("index.html");
+					//Envoyer le contenu du fichier index.html dans cette variable
+					std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
+					// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
+					std::string httpResponse = "HTTP/1.1 200 OK\r\n"
+						   "Content-Type: text/html\r\n"
+						   "Content-Length: " + std::to_string(htmlContent.size()) + "\r\n"
+						   "\r\n" + htmlContent;
+
+					//Envoyer le fichier html avec le bon code HTTP -> (Header du protocole)
+					ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.size(), 0);
+					//Gestion du cas où l'envoi à fail
+					if (bytesSent == -1) {
+						perror("send");
+						exit(EXIT_FAILURE);
+					}
+					//elseif (bytesSent < htmlContent.size) {} //Verifier si seulement une partie à été envoyée
+
+					// Close le fichier index.html
+					htmlFile.close();
 					printf("en attente de lecture\n");
-					//recv();
 				}
 				else if (FD_ISSET(fd, &_writefds)) {
 					printf("en attente d'ecriture\n");
