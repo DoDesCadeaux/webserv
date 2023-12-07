@@ -89,6 +89,34 @@ void Server::addFd(int fd) {
 	_maxfd = _listfds.back();
 }
 
+int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len) {
+	unsigned int total = 0;
+	int bytesleft = *len;
+	int n;
+	int retries = 0;
+
+	while (total < *len) {
+		n = send(fd, httpResponse.c_str() + total, bytesleft, 0);
+		if (n == -1) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				// Le buffer est plein, attendre un peu avant de réessayer
+				usleep(20000);
+				retries++;
+				if (retries > 5) { // Limiter le nombre de réessais pour éviter une boucle infinie
+					break;
+				}
+				continue;
+			}
+		}
+		total += n;
+		bytesleft -= n;
+		retries = 0; // Réinitialiser le compteur de réessais après un envoi réussi
+	}
+
+	*len = total;
+	return (n == -1 ? -1 : 0);
+}
+
 void Server::run() {
 	struct timeval time;
 	struct sockaddr_storage their_addr;
@@ -122,26 +150,17 @@ void Server::run() {
 					std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
 					// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
 					std::string httpResponse = "HTTP/1.1 200 OK\r\n"
-						   "Content-Type: text/html\r\n"
-						   "Content-Length: " + std::to_string(htmlContent.size()) + "\r\n"
-						   "\r\n" + htmlContent;
-
-					//Envoyer le fichier html avec le bon code HTTP -> (Header du protocole)
-					ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.size(), 0);
-					//Gestion du cas où l'envoi à fail
-					if (bytesSent == -1) {
-						perror("send");
+							"Content-Type: text/html\r\n"
+							"Content-Length: " + std::to_string(htmlContent.size()) + "\r\n"
+							"\r\n" + htmlContent;
+					unsigned int len = strlen(httpResponse.c_str());
+					if (sendAll(fd, httpResponse, &len) == -1) {
+						perror("sendall");
+						printf("We only sent %d bytes because of the error!\n", len);
 						exit(EXIT_FAILURE);
 					}
-					//elseif (bytesSent < htmlContent.size) {} //Verifier si seulement une partie à été envoyée
-
-					// Close le fichier index.html
 					htmlFile.close();
-					printf("en attente de lecture\n");
-				}
-				else if (FD_ISSET(fd, &_writefds)) {
-					printf("en attente d'ecriture\n");
-					//send();
+					std::cout << errno << std::endl;
 				}
 			}
 		}

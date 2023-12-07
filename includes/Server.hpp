@@ -42,6 +42,7 @@ public:
 	void 	setSocket();
 	void	addFd(int fd);
 	void	run();
+	int		sendAll(int fd,  const std::string &httpResponse, unsigned int *len);
 	// void	accept();
 	// kill conmnexion
 	// run server avec le select
