@@ -22,8 +22,11 @@ class Client{
         int						            _fd;
 		struct sockaddr_storage         	_addr;
 		bool					            _connect;
-		// port
+		int                                 _fdport;
     public:
-        Client(int fd, struct sockaddr_storage addr, bool connect);
+        Client(int fd, struct sockaddr_storage addr, bool connect, int fdport);
+        int getFdPort() const;
+        int getFd() const;
+
 };
 #endif

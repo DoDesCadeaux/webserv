@@ -12,8 +12,17 @@
 
 #include "../includes/Client.hpp"
 
-Client::Client(int fd, struct sockaddr_storage addr, bool connect) : _fd(fd), _addr(addr), _connect(connect){
+Client::Client(int fd, struct sockaddr_storage addr, bool connect, int fdport) : _fd(fd), _addr(addr), _connect(connect){
     _fd = fd;
     _addr = addr;
     _connect = connect;
+    _fdport = fdport;
+}
+
+int Client::getFdPort() const {
+    return _fdport;
+}
+
+int Client::getFd() const {
+    return _fd;
 }

@@ -15,7 +15,6 @@
 Server::Server()
 {
 	FD_ZERO(&_allfds);
-	FD_ZERO(&_sock);
 }
 
 Server::~Server() {}
@@ -86,11 +85,8 @@ void Server::setSocket()
 		// Free du addrinfo
 		freeaddrinfo(servinfo);
 		addFd(server_fd);
-		// Set des fd socket en provenance des sockets pour les differencier plus tard
-		FD_SET(server_fd, &_sock);
 		printf("connexion au port %s avec les socket %d\n", *it, server_fd);
 	}
-	// QUID DU close(_sockFD);
 	// free le memset
 }
 
@@ -110,6 +106,7 @@ int Server::recvAll(int fd)
 	std::cout << "recv avec le fd :" << fd << std::endl;
 	ssize_t bytesRead = BUFFER_SIZE - 1;
 	char tmp[BUFFER_SIZE];
+	FD_CLR(fd, &_writefds);
 
 	_buff.clear();
 	// Lire les données entrantes jusqu'à ce qu'il n'y ait plus rien à lire
@@ -145,12 +142,14 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 	int bytesleft = *len;
 	int n;
 	int retries = 0;
+	FD_CLR(fd, &_readfds);
 
 	while (total < *len)
 	{
 		n = send(fd, httpResponse.c_str() + total, bytesleft, 0);
 		if (n == -1)
 		{
+			std::cout << errno << std::endl;
 			if (errno == EAGAIN || errno == EWOULDBLOCK)
 			{
 				// Le buffer est plein, attendre un peu avant de réessayer
@@ -186,10 +185,9 @@ void Server::run()
 
 	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &time);
 
-	Ft::printSet(_allfds, "_allfds");
-	Ft::printSet(_sock, "_sock");
-	Ft::printSet(_readfds, "_readfds");
-	Ft::printSet(_writefds, "_writefds");
+	// Ft::printSet(_allfds, "_allfds");
+	// Ft::printSet(_readfds, "_readfds");
+	// Ft::printSet(_writefds, "_writefds");
 
 	if (res == 0)
 		std::cout << "timeout" << std::endl;
@@ -203,57 +201,59 @@ void Server::run()
 			if (FD_ISSET(fd, &_allfds))
 			{
 				// Un nouveau client veut créer une connexion
-				if (FD_ISSET(fd, &_readfds) && FD_ISSET(fd, &_sock))
-				{
+				if (FD_ISSET(fd, &_readfds))
 					newConnection(fd);
-					// addr_size = sizeof their_addr;
-					// newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
-					// std::cout << "addr client :" << &their_addr << std::endl;
-					// if (newfd == -1)
-					// 	perror("accept");
-					// else
-					// 	printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
-					// addFd(newfd);
-				}
+				
+				for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
+				{
+					if (it->second->getFd() == fd)
+					{
+						std::cout << "CE PUTAIN DE FD " << fd << " APPARTIENT A UN CLIENT" << std::endl;
+						// Un client existent nous fait une requête (GET)
+						Ft::printSet(_readfds, "read");
+						Ft::printSet(_writefds, "write");
+						if (FD_ISSET(fd, &_writefds))
+						{
+							std::cout << "WRITE" << std::endl;
 
-				// Ici on doit boucler que sur les fd des clients qui existent , on ne doit pas passer dedans avec les faux clients
-				// Un client existent nous fait une requête (GET)
-				else if (FD_ISSET(fd, &_readfds) && !FD_ISSET(fd, &_sock))
-				{
-					// Ouvrir le fichier index.html
-					std::ifstream htmlFile("index.html");
-					// Envoyer le contenu du fichier index.html dans cette variable
-					std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
-					// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
-					std::string httpResponse = "HTTP/1.1 200 OK\r\n"
-											   "Content-Type: text/html\r\n"
-											   "Content-Length: " +
-											   std::to_string(htmlContent.size()) + "\r\n"
-																					"\r\n" +
-											   htmlContent;
-					unsigned int len = strlen(httpResponse.c_str());
-					if (sendAll(fd, httpResponse, &len) == -1)
-					{
-						perror("sendall");
-						printf("We only sent %d bytes because of the error!\n", len);
-						// exit(EXIT_FAILURE);
-						exit(5);
+							// Ouvrir le fichier index.html
+							std::ifstream htmlFile("index.html");
+							// Envoyer le contenu du fichier index.html dans cette variable
+							std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
+							// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
+							std::string httpResponse = "HTTP/1.1 200 OK\r\n"
+													   "Content-Type: text/html\r\n"
+													   "Content-Length: " +
+													   std::to_string(htmlContent.size()) + "\r\n"
+																							"\r\n" +
+													   htmlContent;
+							unsigned int len = strlen(httpResponse.c_str());
+							if (sendAll(fd, httpResponse, &len) == -1)
+							{
+								perror("sendall");
+								printf("We only sent %d bytes because of the error!\n", len);
+								// exit(EXIT_FAILURE);
+								// exit(5);
+							}
+							htmlFile.close();
+							// Interdit il me semble
+							std::cout << errno << std::endl;
+						}
+						// Un client existent nous envoie une requête (PUSH)
+						else if (FD_ISSET(fd, &_readfds))
+						{
+							std::cout << "READ" << std::endl;
+
+							if (recvAll(fd) == -1)
+							{
+								perror("recvAll()");
+								std::cout << "echec avec le fd :" << fd << std::endl;
+								// exit(EXIT_FAILURE);
+								// exit(6);
+							}
+							printf("en attente d'ecriture\n");
+						}
 					}
-					htmlFile.close();
-					// Interdit il me semble
-					std::cout << errno << std::endl;
-				}
-				// Un client existent nous envoie une requête (PUSH)
-				else if (FD_ISSET(fd, &_writefds))
-				{
-					if (recvAll(fd) == -1)
-					{
-						// perror("recvAll()");
-						std::cout << "echec avec le fd :" << fd << std::endl;
-						// exit(EXIT_FAILURE);
-						exit(6);
-					}
-					printf("en attente d'ecriture\n");
 				}
 			}
 		}
@@ -271,41 +271,47 @@ void Server::newConnection(int fd)
 	socklen_t addr_size;
 	addr_size = sizeof their_addr;
 
-	// FD_CLR(fd, &_readfds);
+	FD_CLR(fd, &_readfds);
 
 	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
 	if (newfd == -1)
-		perror("accept");
-
+		return;
 	std::string addr = addressToString(their_addr);
-	for (std::map<std::string, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++){
-		if (addr == it->first){
+	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (fd == it->second->getFdPort())
+		{
 			close(newfd);
-			return ;
+			return;
 		}
 	}
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
 	printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
 	addFd(newfd);
-	_clients[addressToString(their_addr)] = new Client(newfd, their_addr, true);
+	_clients[newfd] = new Client(newfd, their_addr, true, fd);
 }
 
+std::string addressToString(struct sockaddr_storage &their_addr)
+{
+	char addrstr[INET6_ADDRSTRLEN]; // Assez grand pour IPv6
 
-std::string addressToString(struct sockaddr_storage &their_addr) {
-    char addrstr[INET6_ADDRSTRLEN]; // Assez grand pour IPv6
+	if (their_addr.ss_family == AF_INET)
+	{
+		// C'est une adresse IPv4
+		struct sockaddr_in *addr_in = (struct sockaddr_in *)&their_addr;
+		inet_ntop(AF_INET, &(addr_in->sin_addr), addrstr, sizeof(addrstr));
+	}
+	else if (their_addr.ss_family == AF_INET6)
+	{
+		// C'est une adresse IPv6
+		struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)&their_addr;
+		inet_ntop(AF_INET6, &(addr_in6->sin6_addr), addrstr, sizeof(addrstr));
+	}
+	else
+	{
+		// Type d'adresse inconnu
+		strcpy(addrstr, "Inconnu");
+	}
 
-    if (their_addr.ss_family == AF_INET) {
-        // C'est une adresse IPv4
-        struct sockaddr_in *addr_in = (struct sockaddr_in *)&their_addr;
-        inet_ntop(AF_INET, &(addr_in->sin_addr), addrstr, sizeof(addrstr));
-    } else if (their_addr.ss_family == AF_INET6) {
-        // C'est une adresse IPv6
-        struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)&their_addr;
-        inet_ntop(AF_INET6, &(addr_in6->sin6_addr), addrstr, sizeof(addrstr));
-    } else {
-        // Type d'adresse inconnu
-        strcpy(addrstr, "Inconnu");
-    }
-
-    return std::string(addrstr);
+	return std::string(addrstr);
 }
