@@ -26,6 +26,7 @@ SRCS			=	Ft.cpp\
 					Parsor.cpp\
 					Server.cpp\
 					Request.cpp\
+					Client.cpp\
 
 MAIN			=	main.cpp
 

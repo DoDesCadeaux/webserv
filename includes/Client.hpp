@@ -1,27 +1,29 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Ft.cpp                                             :+:      :+:    :+:   */
+/*   Client.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: pamartin <pamartin@student.s19.be>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2023/11/28 10:27:44 by pamartin          #+#    #+#             */
-/*   Updated: 2023/11/28 10:27:46 by pamartin         ###   ########.fr       */
+/*   Created: 2023/12/11 13:54:30 by pamartin          #+#    #+#             */
+/*   Updated: 2023/12/11 13:54:31 by pamartin         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/Ft.hpp"
+#ifndef CLIENT_HPP
+# define CLIENT_HPP
 
-void Ft::printSet(fd_set set, std::string name){
-    std::cout << name << " : { ";
-
-    for (int i = 0; i < FD_SETSIZE; ++i) {
-        if (FD_ISSET(i, &set)) {
-            std::cout << i << " ";
-        }
-    }
-    std::cout << "}" << std::endl;
-}
+#include <iostream>
+#include <sys/socket.h>
 
 
-
+class Client{
+    private:
+        int						_fd;
+		std::string         	_addr;
+		bool					_connect;
+		// port
+    public:
+        Client(int fd, std::string addr, bool _connect);
+};
+#endif

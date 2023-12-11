@@ -1,27 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Ft.cpp                                             :+:      :+:    :+:   */
+/*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: pamartin <pamartin@student.s19.be>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2023/11/28 10:27:44 by pamartin          #+#    #+#             */
-/*   Updated: 2023/11/28 10:27:46 by pamartin         ###   ########.fr       */
+/*   Created: 2023/12/11 14:46:47 by pamartin          #+#    #+#             */
+/*   Updated: 2023/12/11 14:46:48 by pamartin         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/Ft.hpp"
+#include "Client.hpp"
 
-void Ft::printSet(fd_set set, std::string name){
-    std::cout << name << " : { ";
-
-    for (int i = 0; i < FD_SETSIZE; ++i) {
-        if (FD_ISSET(i, &set)) {
-            std::cout << i << " ";
-        }
-    }
-    std::cout << "}" << std::endl;
+Client::Client(int fd, std::string addr, bool connect){
+    _fd = fd;
+    _addr = addr;
+    _connect = connect;
 }
-
-
-

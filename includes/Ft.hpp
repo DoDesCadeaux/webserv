@@ -22,6 +22,7 @@ class Ft{
 	public:
 		template <class T>
 		static int print(std::string msg, T elem, int err);
+		static void printSet(fd_set set, std::string name);
 };
 
 //QUID de la valeur de retour d'erreur

@@ -26,6 +26,7 @@
 # define BUFFER_SIZE 4096 //test values under 4
 
 class Request;
+// class Client;
 
 class Server
 {
@@ -39,6 +40,8 @@ class Server
 		int 							_maxfd;
 		std::string						_buff;
 		Request							_req;
+		// int								_nbclient = 0;
+		// std::map<int, Client>			_clients;
 		//	std::vector<int>				_clients;
 		// container? workers; => List de res de socket()
 		// container? client: => List de res de accept()
@@ -51,6 +54,7 @@ class Server
 		void	run();
 		int		sendAll(int fd,  const std::string &httpResponse, unsigned int *len);
 		int		recvAll(int fd);
+		void	newConnection(int fd);
 		// void	accept();
 		// kill conmnexion
 		// run server avec le select
