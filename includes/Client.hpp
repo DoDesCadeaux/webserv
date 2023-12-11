@@ -19,11 +19,11 @@
 
 class Client{
     private:
-        int						_fd;
-		std::string         	_addr;
-		bool					_connect;
+        int						            _fd;
+		struct sockaddr_storage         	_addr;
+		bool					            _connect;
 		// port
     public:
-        Client(int fd, std::string addr, bool _connect);
+        Client(int fd, struct sockaddr_storage addr, bool connect);
 };
 #endif

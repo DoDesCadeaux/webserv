@@ -22,11 +22,14 @@
 #include <algorithm>
 #include <map>
 #include <sys/socket.h>
+#include "Client.hpp"
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 # define BUFFER_SIZE 4096 //test values under 4
 
 class Request;
-// class Client;
+class Client;
 
 class Server
 {
@@ -41,7 +44,7 @@ class Server
 		std::string						_buff;
 		Request							_req;
 		// int								_nbclient = 0;
-		// std::map<int, Client>			_clients;
+		std::map<std::string, Client*>			_clients;
 		//	std::vector<int>				_clients;
 		// container? workers; => List de res de socket()
 		// container? client: => List de res de accept()
@@ -62,5 +65,7 @@ class Server
 		// send
 		// update fd_set
 };
+
+std::string addressToString(struct sockaddr_storage &their_addr);
 
 #endif

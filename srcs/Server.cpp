@@ -175,9 +175,9 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 void Server::run()
 {
 	struct timeval time;
-	struct sockaddr_storage their_addr;
-	socklen_t addr_size;
-	int res, newfd;
+	// struct sockaddr_storage their_addr;
+	// socklen_t addr_size;
+	int res;
 
 	_readfds = _allfds;
 	_writefds = _allfds;
@@ -205,15 +205,15 @@ void Server::run()
 				// Un nouveau client veut créer une connexion
 				if (FD_ISSET(fd, &_readfds) && FD_ISSET(fd, &_sock))
 				{
-					// newConnection(fd);
-					addr_size = sizeof their_addr;
-					newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
-					std::cout << "addr client :" << &their_addr << std::endl;
-					if (newfd == -1)
-						perror("accept");
-					else
-						printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
-					addFd(newfd);
+					newConnection(fd);
+					// addr_size = sizeof their_addr;
+					// newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
+					// std::cout << "addr client :" << &their_addr << std::endl;
+					// if (newfd == -1)
+					// 	perror("accept");
+					// else
+					// 	printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
+					// addFd(newfd);
 				}
 
 				// Ici on doit boucler que sur les fd des clients qui existent , on ne doit pas passer dedans avec les faux clients
@@ -265,21 +265,47 @@ void Server::run()
 	// max socket in the master set
 }
 
-// void Server::newConnection(int fd)
-// {
-// 	struct sockaddr_storage their_addr;
-// 	socklen_t addr_size;
-// 	addr_size = sizeof their_addr;
+void Server::newConnection(int fd)
+{
+	struct sockaddr_storage their_addr;
+	socklen_t addr_size;
+	addr_size = sizeof their_addr;
 
-// 	FD_CLR(fd, &_readfds);
+	// FD_CLR(fd, &_readfds);
 
-// 	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
-// 	std::cout << "addr client :" << &their_addr << std::endl;
-// 	if (newfd == -1)
-// 		perror("accept");
-// 	else
-// 		printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
-// 	addFd(newfd);
+	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
+	if (newfd == -1)
+		perror("accept");
 
-// 	_clients[newfd] = new Client(newfd, &their_addr, true);
-// }
+	std::string addr = addressToString(their_addr);
+	for (std::map<std::string, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++){
+		if (addr == it->first){
+			close(newfd);
+			return ;
+		}
+	}
+	fcntl(newfd, F_SETFL, O_NONBLOCK);
+	printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
+	addFd(newfd);
+	_clients[addressToString(their_addr)] = new Client(newfd, their_addr, true);
+}
+
+
+std::string addressToString(struct sockaddr_storage &their_addr) {
+    char addrstr[INET6_ADDRSTRLEN]; // Assez grand pour IPv6
+
+    if (their_addr.ss_family == AF_INET) {
+        // C'est une adresse IPv4
+        struct sockaddr_in *addr_in = (struct sockaddr_in *)&their_addr;
+        inet_ntop(AF_INET, &(addr_in->sin_addr), addrstr, sizeof(addrstr));
+    } else if (their_addr.ss_family == AF_INET6) {
+        // C'est une adresse IPv6
+        struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)&their_addr;
+        inet_ntop(AF_INET6, &(addr_in6->sin6_addr), addrstr, sizeof(addrstr));
+    } else {
+        // Type d'adresse inconnu
+        strcpy(addrstr, "Inconnu");
+    }
+
+    return std::string(addrstr);
+}

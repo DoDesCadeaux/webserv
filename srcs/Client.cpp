@@ -10,9 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Client.hpp"
+#include "../includes/Client.hpp"
 
-Client::Client(int fd, std::string addr, bool connect){
+Client::Client(int fd, struct sockaddr_storage addr, bool connect) : _fd(fd), _addr(addr), _connect(connect){
     _fd = fd;
     _addr = addr;
     _connect = connect;
