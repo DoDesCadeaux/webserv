@@ -146,7 +146,9 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 
 	while (total < *len)
 	{
+		// std::cout << "Je vais faire le send avec " << httpResponse.c_str() << std::endl;
 		n = send(fd, httpResponse.c_str() + total, bytesleft, 0);
+		std::cout << n << std::endl;
 		if (n == -1)
 		{
 			std::cout << errno << std::endl;
@@ -168,6 +170,8 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 	}
 
 	*len = total;
+	std::cout << (n == -1 ? -1 : 0) << std::endl;
+
 	return (n == -1 ? -1 : 0);
 }
 
@@ -203,19 +207,16 @@ void Server::run()
 				// Un nouveau client veut créer une connexion
 				if (FD_ISSET(fd, &_readfds))
 					newConnection(fd);
-				
+
 				for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 				{
 					if (it->second->getFd() == fd)
 					{
-						std::cout << "CE PUTAIN DE FD " << fd << " APPARTIENT A UN CLIENT" << std::endl;
 						// Un client existent nous fait une requête (GET)
 						Ft::printSet(_readfds, "read");
 						Ft::printSet(_writefds, "write");
 						if (FD_ISSET(fd, &_writefds))
 						{
-							std::cout << "WRITE" << std::endl;
-
 							// Ouvrir le fichier index.html
 							std::ifstream htmlFile("index.html");
 							// Envoyer le contenu du fichier index.html dans cette variable
@@ -232,24 +233,20 @@ void Server::run()
 							{
 								perror("sendall");
 								printf("We only sent %d bytes because of the error!\n", len);
-								// exit(EXIT_FAILURE);
-								// exit(5);
+								exit(EXIT_FAILURE);
 							}
 							htmlFile.close();
-							// Interdit il me semble
-							std::cout << errno << std::endl;
+							killConnection(fd);
+							break ;
 						}
 						// Un client existent nous envoie une requête (PUSH)
-						else if (FD_ISSET(fd, &_readfds))
+						if (FD_ISSET(fd, &_readfds))
 						{
-							std::cout << "READ" << std::endl;
-
 							if (recvAll(fd) == -1)
 							{
 								perror("recvAll()");
 								std::cout << "echec avec le fd :" << fd << std::endl;
-								// exit(EXIT_FAILURE);
-								// exit(6);
+								exit(EXIT_FAILURE);
 							}
 							printf("en attente d'ecriture\n");
 						}
@@ -289,6 +286,21 @@ void Server::newConnection(int fd)
 	printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
 	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, fd);
+}
+
+void Server::killConnection(int fd)
+{
+	std::map<int, Client *>::iterator it = _clients.find(fd);
+
+	if (it != _clients.end())
+	{
+		std::cout << it->first << " : " << it->second->getFdPort() << std::endl;
+
+		delete it->second; // Supprimer l'objet pointé, si nécessaire
+		_clients.erase(fd);  // Supprimer l'entrée de la map
+	}
+	close(fd);
+	FD_CLR(fd, &_allfds);
 }
 
 std::string addressToString(struct sockaddr_storage &their_addr)

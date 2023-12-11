@@ -57,6 +57,7 @@ class Server
 		int		sendAll(int fd,  const std::string &httpResponse, unsigned int *len);
 		int		recvAll(int fd);
 		void	newConnection(int fd);
+		void	killConnection(int fd);
 		// void	accept();
 		// kill conmnexion
 		// run server avec le select
