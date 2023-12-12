@@ -208,15 +208,29 @@ void Server::run()
 				if (FD_ISSET(fd, &_readfds))
 					newConnection(fd);
 
+				// Le client est connecté
 				for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 				{
 					if (it->second->getFd() == fd)
 					{
+						// Un client existent nous envoie une requête (PUSH)
+						if (FD_ISSET(fd, &_readfds))
+						{
+							if (recvAll(fd) == -1)
+							{
+								perror("recvAll()");
+								std::cout << "echec avec le fd :" << fd << std::endl;
+								exit(EXIT_FAILURE);
+							}
+							printf("en attente d'ecriture\n");
+						}
+
 						// Un client existent nous fait une requête (GET)
 						Ft::printSet(_readfds, "read");
 						Ft::printSet(_writefds, "write");
 						if (FD_ISSET(fd, &_writefds))
 						{
+						//Factoriser --> Dorian
 							// Ouvrir le fichier index.html
 							std::ifstream htmlFile("index.html");
 							// Envoyer le contenu du fichier index.html dans cette variable
@@ -229,6 +243,12 @@ void Server::run()
 																							"\r\n" +
 													   htmlContent;
 							unsigned int len = strlen(httpResponse.c_str());
+
+							//Creer une fct 'responder' qui se charge de interpréter la demande du client :
+								// 1) Demande accès à un fichier accessible sur notre serveur --> sendAll()
+								// 2) Demande de delete un fichier accessible sur notre serveur --> deleteFile()
+								// 3) CGI --> cgiHandler()
+							//Pas oublier de toujours récup la valeur return et vérifier s'il y a eu une erreur 
 							if (sendAll(fd, httpResponse, &len) == -1)
 							{
 								perror("sendall");
@@ -238,17 +258,6 @@ void Server::run()
 							htmlFile.close();
 							killConnection(fd);
 							break ;
-						}
-						// Un client existent nous envoie une requête (PUSH)
-						if (FD_ISSET(fd, &_readfds))
-						{
-							if (recvAll(fd) == -1)
-							{
-								perror("recvAll()");
-								std::cout << "echec avec le fd :" << fd << std::endl;
-								exit(EXIT_FAILURE);
-							}
-							printf("en attente d'ecriture\n");
 						}
 					}
 				}
