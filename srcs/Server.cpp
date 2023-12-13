@@ -228,7 +228,7 @@ void Server::run()
 						{
 						//Factoriser --> Dorian
 							// Ouvrir le fichier index.html
-							std::ifstream htmlFile("index.html");
+							std::ifstream htmlFile("web/index.html");
 							// Envoyer le contenu du fichier index.html dans cette variable
 							std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
 							// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
