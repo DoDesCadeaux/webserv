@@ -4,26 +4,25 @@ Request::Request() {}
 
 Request::Request(const std::string &requestformat) : _requestformat(requestformat) {}
 
-std::string Request::getFormat() const {
-	return _requestformat;
-}
-
-std::string Request::getLine() const {
-	return _requestline;
-}
-
-std::string Request::getProtocol() const {
-	return _requestprotocol;
-}
-
 void Request::setLine() {
-	ssize_t endl = _requestformat.find('\n');
+	ssize_t endl = _requestformat.find('\r');
 	_requestline = _requestformat.substr(0, endl);
 }
 
 void Request::setProtocol() {
 	ssize_t endProtocol = _requestline.find(' ');
 	_requestprotocol = _requestline.substr(0, endProtocol);
+}
+
+void Request::setUri() {
+	ssize_t uripos = _requestline.find('/');
+	std::string uritoend;
+
+	uritoend = _requestline.substr(uripos, std::string::npos);
+
+	ssize_t spacepos = uritoend.find(' ');
+
+	_requesturi = uritoend.substr(0, spacepos);
 }
 
 void Request::setHeader() {
@@ -45,6 +44,13 @@ void Request::setHeader() {
 			}
 		}
 	}
+}
+
+void Request::setupRequest() {
+	this->setLine();
+	this->setProtocol();
+	this->setHeader();
+	this->setUri();
 }
 
 void Request::displayHeaderTypes() const {
@@ -71,4 +77,16 @@ bool Request::isValidProtocol() {
 
 void Request::replaceProtocolTo(const std::string &newprotocol) {
 	_requestprotocol = newprotocol;
+}
+
+std::string Request::getFormat() const {
+	return _requestformat;
+}
+
+std::string Request::getLine() const {
+	return _requestline;
+}
+
+std::string Request::getProtocol() const {
+	return _requestprotocol;
 }

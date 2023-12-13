@@ -13,6 +13,7 @@ private:
 	std::string								_requestformat;
 	std::string 							_requestline;
 	std::string								_requestprotocol;
+	std::string 							_requesturi;
 	std::map<std::string, std::string>		_requestheadertypes;
 
 public:
@@ -25,12 +26,15 @@ public:
 
 	void 		displayHeaderTypes() const;
 
+	void		setupRequest();
+
+	void		setUri();
 	void		setProtocol();
-	void 		replaceProtocolTo(const std::string &newprotocol);
 	void		setLine();
 	void		setHeader();
 
 	bool		isValidProtocol();
+	void 		replaceProtocolTo(const std::string &newprotocol);
 };
 
 #endif
