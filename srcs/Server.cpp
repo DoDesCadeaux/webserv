@@ -108,7 +108,7 @@ int Server::recvAll(int fd)
 	char tmp[BUFFER_SIZE];
 	FD_CLR(fd, &_writefds);
 
-	_buff.clear();
+	_requestformat.clear();
 	// Lire les données entrantes jusqu'à ce qu'il n'y ait plus rien à lire
 	while (bytesRead == BUFFER_SIZE - 1)
 	{
@@ -117,7 +117,7 @@ int Server::recvAll(int fd)
 		if (bytesRead > 0)
 		{
 			tmp[bytesRead] = '\0';
-			_buff += tmp;
+			_requestformat += tmp;
 		}
 		else if (bytesRead == 0)
 		{
@@ -127,10 +127,11 @@ int Server::recvAll(int fd)
 		else
 			return (-1);
 	}
-	if (_buff.size() > 0)
+	if (!_requestformat.empty())
 	{
-		Request req(_buff);
+		Request req(_requestformat);
 		_req = req;
+		std::cout << _requestformat << std::endl;
 	}
 	return (bytesRead);
 }
@@ -148,7 +149,6 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 	{
 		// std::cout << "Je vais faire le send avec " << httpResponse.c_str() << std::endl;
 		n = send(fd, httpResponse.c_str() + total, bytesleft, 0);
-		std::cout << n << std::endl;
 		if (n == -1)
 		{
 			std::cout << errno << std::endl;
@@ -170,7 +170,6 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 	}
 
 	*len = total;
-	std::cout << (n == -1 ? -1 : 0) << std::endl;
 
 	return (n == -1 ? -1 : 0);
 }
@@ -188,10 +187,6 @@ void Server::run()
 	time.tv_usec = 500000;
 
 	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &time);
-
-	// Ft::printSet(_allfds, "_allfds");
-	// Ft::printSet(_readfds, "_readfds");
-	// Ft::printSet(_writefds, "_writefds");
 
 	if (res == 0)
 		std::cout << "timeout" << std::endl;
@@ -213,7 +208,7 @@ void Server::run()
 				{
 					if (it->second->getFd() == fd)
 					{
-						// Un client existent nous envoie une requête (PUSH)
+						// Un client existant nous envoie une requête (PUSH)
 						if (FD_ISSET(fd, &_readfds))
 						{
 							if (recvAll(fd) == -1)
@@ -222,10 +217,11 @@ void Server::run()
 								std::cout << "echec avec le fd :" << fd << std::endl;
 								exit(EXIT_FAILURE);
 							}
+							FD_CLR(fd, &_readfds);
 							printf("en attente d'ecriture\n");
 						}
 
-						// Un client existent nous fait une requête (GET)
+						// Un client existant nous fait une requête (GET)
 						Ft::printSet(_readfds, "read");
 						Ft::printSet(_writefds, "write");
 						if (FD_ISSET(fd, &_writefds))
@@ -272,7 +268,8 @@ void Server::newConnection(int fd)
 	socklen_t addr_size;
 	addr_size = sizeof their_addr;
 
-	FD_CLR(fd, &_readfds);
+
+//	FD_CLR(fd, &_readfds); //->Cette ligne bloque le fait que la requete n'entre jamais en tant que lecture, donc nous ne recevons jamais la requete HTTP
 
 	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
 	if (newfd == -1)

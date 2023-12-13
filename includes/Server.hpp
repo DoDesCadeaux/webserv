@@ -41,7 +41,7 @@ class Server
 		fd_set							_readfds;
 		fd_set							_writefds;
 		int 							_maxfd;
-		std::string						_buff;
+		std::string						_requestformat;
 		Request							_req;
 		// int								_nbclient = 0;
 		std::map<int, Client*>			_clients;

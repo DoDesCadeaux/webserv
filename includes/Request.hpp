@@ -6,10 +6,10 @@
 
 class Request {
 	private:
-		std::string			_buff;
+		std::string			_requestformat;
 	public:
 		Request();
-		Request(const std::string &buff);
+		Request(const std::string &_requestformat);
 		~Request();
 };
 

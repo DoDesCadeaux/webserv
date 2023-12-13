@@ -1,7 +1,7 @@
-#include "Request.hpp"
+#include "../includes/Request.hpp"
 
 Request::Request() {}
 
-Request::Request(const std::string &buff) : _buff(buff) {}
+Request::Request(const std::string &requestformat) : _requestformat(requestformat) {}
 
 Request::~Request() {}
