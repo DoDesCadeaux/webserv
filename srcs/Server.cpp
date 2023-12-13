@@ -131,7 +131,10 @@ int Server::recvAll(int fd)
 	{
 		Request req(_requestformat);
 		_req = req;
-		std::cout << _requestformat << std::endl;
+		req.setLine();
+		req.setProtocol();
+		req.setHeader();
+		req.displayHeaderTypes(); //Ici on affiche tous les headertypes dans l'attribut map de req (key:value)
 	}
 	return (bytesRead);
 }
