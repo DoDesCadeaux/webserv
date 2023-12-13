@@ -60,8 +60,8 @@ int Parsor::parse(std::string configName)
     while (std::getline(file, line)){
         itLine++;
         last = findEnd(line);
-        
-        if (line.find_first_not_of(" \t", 0) == '#' || last == '\0' || last == 4)
+
+        if (line.empty() || line[line.find_first_not_of(" \t", 0)] == '#' || last == '\0' || last == 4)
             continue;
         //Manque fonction check toute la ligne du debut jusqu'au last
         if (last == '{'){
@@ -85,4 +85,3 @@ int Parsor::parse(std::string configName)
 
     return 1;
 }
-
