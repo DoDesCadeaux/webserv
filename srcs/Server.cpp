@@ -130,7 +130,6 @@ int Server::recvAll(int fd)
 	if (!_requestformat.empty())
 	{
 		Request req(_requestformat);
-		_req = req;
 		req.setupRequest(); //Setup tous les attributs de Request (ligne de requete (protocole, uri, version http) et header types)
 		req.displayHeaderTypes(); //Ici on affiche tous les headertypes dans l'attribut map de req (key:value)
 	}

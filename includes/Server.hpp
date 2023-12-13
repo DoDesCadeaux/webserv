@@ -29,7 +29,6 @@
 
 # define BUFFER_SIZE 4096 //test values under 4
 
-class Request;
 class Client;
 
 class Server
@@ -42,7 +41,6 @@ class Server
 		fd_set							_writefds;
 		int 							_maxfd;
 		std::string						_requestformat;
-		Request							_req;
 		// int								_nbclient = 0;
 		std::map<int, Client*>			_clients;
 		//	std::vector<int>				_clients;
