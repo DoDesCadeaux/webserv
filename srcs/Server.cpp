@@ -103,7 +103,6 @@ void Server::addFd(int fd)
 // Retourne la valeur de l'erreur ou le nombre d'octets lus lors du dernier recv()
 int Server::recvAll(int fd)
 {
-	std::cout << "recv avec le fd :" << fd << std::endl;
 	ssize_t bytesRead = BUFFER_SIZE - 1;
 	char tmp[BUFFER_SIZE];
 	FD_CLR(fd, &_writefds);
@@ -129,25 +128,23 @@ int Server::recvAll(int fd)
 	}
 	if (!_requestformat.empty())
 	{
-		Request req(_requestformat);
-		req.setupRequest(); //Setup tous les attributs de Request (ligne de requete (protocole, uri, version http) et header types)
-		req.displayHeaderTypes(); //Ici on affiche tous les headertypes dans l'attribut map de req (key:value)
+		Request request(_requestformat);
+		request.setupRequest(); //Setup tous les attributs de Request (ligne de requete (protocole, uri, version http) et header types)
+		_requesturi = request.getUri();
+//		request.displayHeaderTypes(); //Ici on affiche tous les headertypes dans l'attribut map de req (key:value)
 	}
 	return (bytesRead);
 }
 
 int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 {
-	std::cout << "send avec le fd: " << fd << std::endl;
 	unsigned int total = 0;
 	int bytesleft = *len;
 	int n;
 	int retries = 0;
-	FD_CLR(fd, &_readfds);
 
 	while (total < *len)
 	{
-		// std::cout << "Je vais faire le send avec " << httpResponse.c_str() << std::endl;
 		n = send(fd, httpResponse.c_str() + total, bytesleft, 0);
 		if (n == -1)
 		{
@@ -170,26 +167,20 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 	}
 
 	*len = total;
-
+	FD_CLR(fd, &_readfds);
 	return (n == -1 ? -1 : 0);
 }
 
 void Server::run()
 {
-	struct timeval time;
 	// struct sockaddr_storage their_addr;
 	// socklen_t addr_size;
 	int res;
 
 	_readfds = _allfds;
 	_writefds = _allfds;
-	time.tv_sec = 1;
-	time.tv_usec = 500000;
 
-	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &time);
-
-	if (res == 0)
-		std::cout << "timeout" << std::endl;
+	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, NULL);
 	if (res == -1)
 		std::cout << "error" << std::endl;
 	else
@@ -218,23 +209,19 @@ void Server::run()
 								exit(EXIT_FAILURE);
 							}
 							FD_CLR(fd, &_readfds);
-							printf("en attente d'ecriture\n");
 						}
 
 						// Un client existant nous fait une requête (GET)
-						Ft::printSet(_readfds, "read");
-						Ft::printSet(_writefds, "write");
+//						Ft::printSet(_readfds, "read");
+//						Ft::printSet(_writefds, "write");
 						if (FD_ISSET(fd, &_writefds))
 						{
 						//Factoriser --> Dorian
-							// Ouvrir le fichier index.html
-							std::ifstream htmlFile("web/index.html");
 							// Envoyer le contenu du fichier index.html dans cette variable
-							std::string htmlContent((std::istreambuf_iterator<char>(htmlFile)), std::istreambuf_iterator<char>());
+							std::string htmlContent = getResourceContent();
 							// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
 							std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent);
 							unsigned int len = strlen(httpResponse.c_str());
-
 							//Creer une fct 'responder' qui se charge de interpréter la demande du client :
 								// 1) Demande accès à un fichier accessible sur notre serveur --> sendAll()
 								// 2) Demande de delete un fichier accessible sur notre serveur --> deleteFile()
@@ -246,7 +233,6 @@ void Server::run()
 								printf("We only sent %d bytes because of the error!\n", len);
 								exit(EXIT_FAILURE);
 							}
-							htmlFile.close();
 							killConnection(fd);
 							break ;
 						}
@@ -295,13 +281,40 @@ void Server::killConnection(int fd)
 
 	if (it != _clients.end())
 	{
-		std::cout << it->first << " : " << it->second->getFdPort() << std::endl;
-
 		delete it->second; // Supprimer l'objet pointé, si nécessaire
 		_clients.erase(fd);  // Supprimer l'entrée de la map
 	}
 	close(fd);
 	FD_CLR(fd, &_allfds);
+}
+
+std::string Server::getResourceContent() {
+	std::string uri = this->_requesturi;
+	std::string fullpath = SERVER_ROOT + uri;
+
+	if (uri == "/" || uri == "/index") {
+		fullpath = "web/index.html";
+	}
+
+	if (!fileExists(fullpath)) {
+		std::ifstream file("web/notFound.html", std::ifstream::binary);
+		if (file) {
+			std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+			return content;
+		}
+	}
+
+	std::ifstream file(fullpath, std::ifstream::binary);
+	if (file) {
+		std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		return content;
+	}
+	return NULL;
+}
+
+bool fileExists(const std::string &filePath) {
+	std::ifstream file(filePath.c_str());
+	return file.good();
 }
 
 std::string addressToString(struct sockaddr_storage &their_addr)

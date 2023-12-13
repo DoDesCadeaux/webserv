@@ -26,8 +26,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <fstream>
 
 # define BUFFER_SIZE 4096 //test values under 4
+# define SERVER_ROOT "web"
 
 class Client;
 
@@ -41,6 +43,7 @@ class Server
 		fd_set							_writefds;
 		int 							_maxfd;
 		std::string						_requestformat;
+		std::string						_requesturi;
 		// int								_nbclient = 0;
 		std::map<int, Client*>			_clients;
 		//	std::vector<int>				_clients;
@@ -57,6 +60,7 @@ class Server
 		int		recvAll(int fd);
 		void	newConnection(int fd);
 		void	killConnection(int fd);
+		std::string getResourceContent();
 		// void	accept();
 		// kill conmnexion
 		// run server avec le select
@@ -64,6 +68,8 @@ class Server
 		// send
 		// update fd_set
 };
+
+bool fileExists(const std::string& filePath);
 
 std::string addressToString(struct sockaddr_storage &their_addr);
 

@@ -2,11 +2,11 @@
 
 Request::Request() {}
 
-Request::Request(const std::string &requestformat) : _requestformat(requestformat) {}
+Request::Request(const std::string &requestformat) : requestformat(requestformat) {}
 
 void Request::setLine() {
-	ssize_t endl = _requestformat.find('\r');
-	_requestline = _requestformat.substr(0, endl);
+	ssize_t endl = requestformat.find('\r');
+	_requestline = requestformat.substr(0, endl);
 }
 
 void Request::setProtocol() {
@@ -27,7 +27,7 @@ void Request::setUri() {
 
 void Request::setHeader() {
 	if (_requestprotocol == "GET") {
-		std::istringstream	stream(_requestformat);
+		std::istringstream	stream(requestformat);
 		std::string 		line;
 
 		std::getline(stream, line);
@@ -49,8 +49,8 @@ void Request::setHeader() {
 void Request::setupRequest() {
 	this->setLine();
 	this->setProtocol();
-	this->setHeader();
 	this->setUri();
+	this->setHeader();
 }
 
 void Request::displayHeaderTypes() const {
@@ -80,7 +80,7 @@ void Request::replaceProtocolTo(const std::string &newprotocol) {
 }
 
 std::string Request::getFormat() const {
-	return _requestformat;
+	return requestformat;
 }
 
 std::string Request::getLine() const {
@@ -89,4 +89,8 @@ std::string Request::getLine() const {
 
 std::string Request::getProtocol() const {
 	return _requestprotocol;
+}
+
+std::string Request::getUri() const {
+	return _requesturi;
 }

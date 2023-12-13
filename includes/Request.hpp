@@ -10,19 +10,21 @@
 
 class Request {
 private:
-	std::string								_requestformat;
 	std::string 							_requestline;
 	std::string								_requestprotocol;
 	std::string 							_requesturi;
 	std::map<std::string, std::string>		_requestheadertypes;
 
 public:
+	std::string								requestformat;
+
 	Request();
 	Request(const std::string &requestformat);
 
 	std::string	getFormat() const;
 	std::string	getLine() const;
 	std::string getProtocol() const;
+	std::string getUri() const;
 
 	void 		displayHeaderTypes() const;
 

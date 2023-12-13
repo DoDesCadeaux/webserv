@@ -10,11 +10,8 @@ int main(int argc, char **argv) {
 
 	Server server;
 	server.setSocket();
-	int i = 0;
+
 	while (true) {
-		std::cout << "tour " << i << std::endl;
 		server.run();
-		i++;
 	}
-	return 0;
 }
