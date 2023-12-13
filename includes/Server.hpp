@@ -13,16 +13,17 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include "Client.hpp"
+#include "Parsor.hpp"
+#include "Request.hpp"
+#include "HttpResponse.hpp"
 #include <netdb.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "Parsor.hpp"
-#include "Request.hpp"
-#include <list>
 #include <algorithm>
+#include <list>
 #include <map>
 #include <sys/socket.h>
-#include "Client.hpp"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
