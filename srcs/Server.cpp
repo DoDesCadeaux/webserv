@@ -191,6 +191,7 @@ void Server::run()
 			if (FD_ISSET(fd, &_allfds))
 			{
 				// Un nouveau client veut créer une connexion
+				usleep(1);
 				if (FD_ISSET(fd, &_readfds))
 					newConnection(fd);
 
