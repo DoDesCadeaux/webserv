@@ -72,8 +72,4 @@ class Server
 		// update fd_set
 };
 
-bool fileExists(const std::string& filePath);
-
-std::string addressToString(struct sockaddr_storage &their_addr);
-
 #endif

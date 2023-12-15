@@ -119,7 +119,7 @@ int Server::recvAll(int fd)
 {
 	ssize_t bytesRead = BUFFER_SIZE - 1;
 	char tmp[BUFFER_SIZE];
-	FD_CLR(fd, &_writefds);
+	FD_CLR(fd, &_readfds);
 
 	_requestformat.clear();
 	// Lire les données entrantes jusqu'à ce qu'il n'y ait plus rien à lire
@@ -132,11 +132,6 @@ int Server::recvAll(int fd)
 			tmp[bytesRead] = '\0';
 			_requestformat += tmp;
 		}
-		else if (bytesRead == 0)
-		{
-			std::cout << "Connection was closed" << std::endl;
-			return 0;
-		}
 		else
 			return (-1);
 	}
@@ -144,11 +139,8 @@ int Server::recvAll(int fd)
 	if (!_requestformat.empty())
 	{
 		Request request(_requestformat);
-		request.setupRequest();//Setup tous les attributs de Request (ligne de requete (protocole, uri, version http) et header types)
-		std::cout << "CREATION URI" << std::endl;
 		_requesturi = request.getUri();
-		std::cout << "URI : " << _requesturi << std::endl;
-//		request.displayHeaderTypes(); //Ici on affiche tous les headertypes dans l'attribut map de req (key:value)
+		std::cout << _requestformat << std::endl;
 	}
 	return (bytesRead);
 }
@@ -159,6 +151,7 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 	int bytesleft = *len;
 	int n;
 	int retries = 0;
+	FD_CLR(fd, &_writefds);
 
 	while (total < *len)
 	{
@@ -182,7 +175,6 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 	}
 
 	*len = total;
-	FD_CLR(fd, &_readfds);
 	return (n == -1 ? -1 : 0);
 }
 
@@ -200,7 +192,9 @@ void Server::run()
 	_writefds = _allfds;
 
 	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
-	Ft::printSet(_readfds, "Select read fd");
+	Ft::printSet(_readfds, "Select READ fd");
+	Ft::printSet(_allfds, "Select ALL fd");
+	Ft::printSet(_writefds, "Select WRITE fd");
 	Ft::printClient(_clients);
 	if (res == -1)
 		std::cout << "error" << std::endl;
@@ -232,9 +226,10 @@ void Server::run()
 							{
 								perror("recvAll()");
 								std::cout << "echec avec le fd :" << fd << std::endl;
+								killConnection(fd);
+								continue;
 							}
 //							FD_CLR(fd, &_readfds);
-							break;
 						}
 
 						// Un client existant nous fait une requête (GET)
@@ -257,10 +252,12 @@ void Server::run()
 							{
 								perror("sendall");
 								printf("We only sent %d bytes because of the error!\n", len);
-								exit(EXIT_FAILURE);
+								killConnection(fd);
+								continue;
 							}
+							usleep(500);
 							killConnection(fd);
-							break ;
+							break;
 						}
 					}
 				}
@@ -327,7 +324,7 @@ std::string Server::getResourceContent() {
 		fullpath = "web/index.html";
 	}
 
-	if (!fileExists(fullpath)) {
+	if (!Ft::fileExists(fullpath)) {
 		std::ifstream file("web/notFound.html", std::ifstream::binary);
 		if (file) {
 			std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -341,34 +338,4 @@ std::string Server::getResourceContent() {
 		}
 	}
 	return NULL;
-}
-
-bool fileExists(const std::string &filePath) {
-	std::ifstream file(filePath.c_str());
-	return file.good();
-}
-
-std::string addressToString(struct sockaddr_storage &their_addr)
-{
-	char addrstr[INET6_ADDRSTRLEN]; // Assez grand pour IPv6
-
-	if (their_addr.ss_family == AF_INET)
-	{
-		// C'est une adresse IPv4
-		struct sockaddr_in *addr_in = (struct sockaddr_in *)&their_addr;
-		inet_ntop(AF_INET, &(addr_in->sin_addr), addrstr, sizeof(addrstr));
-	}
-	else if (their_addr.ss_family == AF_INET6)
-	{
-		// C'est une adresse IPv6
-		struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)&their_addr;
-		inet_ntop(AF_INET6, &(addr_in6->sin6_addr), addrstr, sizeof(addrstr));
-	}
-	else
-	{
-		// Type d'adresse inconnu
-		strcpy(addrstr, "Inconnu");
-	}
-
-	return std::string(addrstr);
 }

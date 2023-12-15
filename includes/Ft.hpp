@@ -26,6 +26,7 @@ class Ft{
 		static int print(std::string msg, T elem, int err);
 		static void printSet(fd_set set, std::string name);
 		static void printClient(std::map<int, Client *> clients);
+		static bool fileExists(const std::string& filePath);
 };
 
 //QUID de la valeur de retour d'erreur
@@ -51,5 +52,6 @@ int Ft::print(std::string msg, T elem, int err){
 	std::cout << std::endl;
 	return err;
 }
+
 
 #endif

@@ -30,3 +30,8 @@ void Ft::printClient(std::map<int, Client *> clients) {
 	}
 	std::cout << "]" << std::endl;
 }
+
+bool Ft::fileExists(const std::string &filePath) {
+	std::ifstream file(filePath.c_str());
+	return file.good();
+}
