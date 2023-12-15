@@ -66,6 +66,8 @@ void Server::setSocket()
 			exit(1);
 		}
 
+
+
 		// Attribution du socket au port
 		if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0)
 		{
@@ -75,17 +77,15 @@ void Server::setSocket()
 			exit(3);
 		}
 
-		if (listen(server_fd, 2) < 0)
+		if (listen(server_fd, 10) < 0)
 		{
 			perror("Listen");
 			// exit(EXIT_FAILURE);
 			exit(4);
 		}
-
 		// Free du addrinfo
 		freeaddrinfo(servinfo);
 		addFd(server_fd);
-		printf("connexion au port %s avec les socket %d\n", *it, server_fd);
 	}
 	// free le memset
 }
@@ -155,9 +155,7 @@ int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
 				usleep(20000);
 				retries++;
 				if (retries > 5)
-				{ // Limiter le nombre de réessais pour éviter une boucle infinie
 					break;
-				}
 				continue;
 			}
 		}
@@ -207,9 +205,9 @@ void Server::run()
 							{
 								perror("recvAll()");
 								std::cout << "echec avec le fd :" << fd << std::endl;
-								exit(EXIT_FAILURE);
 							}
 							FD_CLR(fd, &_readfds);
+							break;
 						}
 
 						// Un client existant nous fait une requête (GET)
@@ -271,7 +269,6 @@ void Server::newConnection(int fd)
 		}
 	}
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
-	printf("new connection accepted with sock : %d avec fd de base : %d\n", newfd, fd);
 	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, fd);
 }
@@ -285,6 +282,7 @@ void Server::killConnection(int fd)
 		delete it->second; // Supprimer l'objet pointé, si nécessaire
 		_clients.erase(fd);  // Supprimer l'entrée de la map
 	}
+	shutdown(fd, 0);
 	close(fd);
 	FD_CLR(fd, &_allfds);
 }
