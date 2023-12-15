@@ -30,6 +30,8 @@
 
 # define BUFFER_SIZE 4096 //test values under 4
 # define SERVER_ROOT "web"
+# define GREEN "\e[32m"
+# define NOCOL "\e[39m"
 
 class Client;
 
@@ -55,6 +57,7 @@ class Server
 		~Server();
 		void 	setSocket();
 		void	addFd(int fd);
+		void	removeFd(int fd);
 		void	run();
 		int		sendAll(int fd,  const std::string &httpResponse, unsigned int *len);
 		int		recvAll(int fd);

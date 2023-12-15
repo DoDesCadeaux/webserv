@@ -12,7 +12,7 @@
 
 #include "../includes/Ft.hpp"
 
-void Ft::printSet(fd_set set, std::string name){
+void Ft::printSet(fd_set set, std::string name) {
     std::cout << name << " : { ";
 
     for (int i = 0; i < FD_SETSIZE; ++i) {
@@ -23,5 +23,10 @@ void Ft::printSet(fd_set set, std::string name){
     std::cout << "}" << std::endl;
 }
 
-
-
+void Ft::printClient(std::map<int, Client *> clients) {
+	std::cout << "clients : [ ";
+	for (std::map<int, Client *>::iterator it = clients.begin(); it != clients.end(); ++it) {
+		std::cout << it->first << " ";
+	}
+	std::cout << "]" << std::endl;
+}

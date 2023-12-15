@@ -13,6 +13,8 @@
 # define FT_HPP
 
 #include <iostream>
+#include "../includes/Server.hpp"
+#include <map>
 
 #define ERR_CONF_EXTRA_BR "Error config file: extra bracket line @."
 #define ERR_CONF_MISSING_BR "Error config file: missing closing bracket to match this '{' in the line @."
@@ -23,6 +25,7 @@ class Ft{
 		template <class T>
 		static int print(std::string msg, T elem, int err);
 		static void printSet(fd_set set, std::string name);
+		static void printClient(std::map<int, Client *> clients);
 };
 
 //QUID de la valeur de retour d'erreur

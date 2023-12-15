@@ -97,6 +97,20 @@ void Server::addFd(int fd)
 	_listfds.sort();
 	_maxfd = _listfds.back();
 }
+
+void Server::removeFd(int fd) {
+	FD_CLR(fd, &_allfds);
+	for (std::list<int>::iterator it = _listfds.begin(); it != _listfds.end(); ++it) {
+		if (*it == fd)
+		{
+			_listfds.erase(it);
+			break;
+		}
+	}
+	if (fd == _maxfd)
+		_maxfd = _listfds.back();
+}
+
 // Lis une requête entrante sur le socket
 // Continuer à appeler recv() jusqu'à ce que tout le contenu soit lu ou qu'il y ait une erreur/fermeture de la connexion
 // Analyse ensuite la requête reçue
@@ -126,11 +140,14 @@ int Server::recvAll(int fd)
 		else
 			return (-1);
 	}
+
 	if (!_requestformat.empty())
 	{
 		Request request(_requestformat);
-		request.setupRequest(); //Setup tous les attributs de Request (ligne de requete (protocole, uri, version http) et header types)
+		request.setupRequest();//Setup tous les attributs de Request (ligne de requete (protocole, uri, version http) et header types)
+		std::cout << "CREATION URI" << std::endl;
 		_requesturi = request.getUri();
+		std::cout << "URI : " << _requesturi << std::endl;
 //		request.displayHeaderTypes(); //Ici on affiche tous les headertypes dans l'attribut map de req (key:value)
 	}
 	return (bytesRead);
@@ -174,11 +191,17 @@ void Server::run()
 	// struct sockaddr_storage their_addr;
 	// socklen_t addr_size;
 	int res;
+	struct timeval timeout;
+
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
 
 	_readfds = _allfds;
 	_writefds = _allfds;
 
-	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, NULL);
+	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
+	Ft::printSet(_readfds, "Select read fd");
+	Ft::printClient(_clients);
 	if (res == -1)
 		std::cout << "error" << std::endl;
 	else
@@ -189,7 +212,6 @@ void Server::run()
 			if (FD_ISSET(fd, &_allfds))
 			{
 				// Un nouveau client veut créer une connexion
-				usleep(1);
 				if (FD_ISSET(fd, &_readfds))
 					newConnection(fd);
 
@@ -198,15 +220,20 @@ void Server::run()
 				{
 					if (it->second->getFd() == fd)
 					{
+
+						std::cout << GREEN <<"FD CLIENT : [" << it->second->getFd() << "]" << NOCOL << std::endl;
+						Ft::printSet(_readfds, "recv read fd");
+
 						// Un client existant nous envoie une requête (PUSH)
 						if (FD_ISSET(fd, &_readfds))
 						{
+							std::cout << "dans recv avec : [" << fd << "]" << std::endl;
 							if (recvAll(fd) == -1)
 							{
 								perror("recvAll()");
 								std::cout << "echec avec le fd :" << fd << std::endl;
 							}
-							FD_CLR(fd, &_readfds);
+//							FD_CLR(fd, &_readfds);
 							break;
 						}
 
@@ -255,22 +282,28 @@ void Server::newConnection(int fd)
 
 
 //	FD_CLR(fd, &_readfds); //->Cette ligne bloque le fait que la requete n'entre jamais en tant que lecture, donc nous ne recevons jamais la requete HTTP
-
-	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
-	if (newfd == -1)
-		return;
-	std::string addr = addressToString(their_addr);
 	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
-		if (fd == it->second->getFdPort())
-		{
-			close(newfd);
+		std::cout << "Client : " <<  it->first << " sur le port : " << it->second->getFdPort() << std::endl;
+		std::cout << "Recherche avec FD : " << fd << std::endl;
+		if (fd == it->first) {
+			std::cout << "Le client existe deja avec port : " << it->first << std::endl;
 			return;
 		}
 	}
+
+	Ft::printSet(_readfds, "New Co read fd");
+
+	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
+	if (newfd == -1) {
+		return;
+	}
+//	std::string addr = addressToString(their_addr);
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
 	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, fd);
+	std::cout << "Les clients apres ajout ->";
+	Ft::printClient(_clients);
 }
 
 void Server::killConnection(int fd)
@@ -282,13 +315,12 @@ void Server::killConnection(int fd)
 		delete it->second; // Supprimer l'objet pointé, si nécessaire
 		_clients.erase(fd);  // Supprimer l'entrée de la map
 	}
-	shutdown(fd, 0);
 	close(fd);
-	FD_CLR(fd, &_allfds);
+	removeFd(fd);
 }
 
 std::string Server::getResourceContent() {
-	std::string uri = this->_requesturi;
+	std::string uri = _requesturi;
 	std::string fullpath = SERVER_ROOT + uri;
 
 	if (uri == "/" || uri == "/index") {
@@ -301,12 +333,12 @@ std::string Server::getResourceContent() {
 			std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 			return content;
 		}
-	}
-
-	std::ifstream file(fullpath, std::ifstream::binary);
-	if (file) {
-		std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-		return content;
+	} else {
+		std::ifstream file(fullpath, std::ifstream::binary);
+		if (file) {
+			std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+			return content;
+		}
 	}
 	return NULL;
 }
