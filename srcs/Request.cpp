@@ -1,9 +1,21 @@
 #include "../includes/Request.hpp"
 
-Request::Request() {}
+Request::Request() {};
 
 Request::Request(const std::string &requestformat) : _requestformat(requestformat) {
 	setupRequest();
+}
+
+Request &Request::operator=(const Request &other) {
+	if (this != &other) {
+		_requestline = other._requestline;
+		_requestprotocol = other._requestprotocol;
+		_requesturi = other._requesturi;
+		_requestformat = other._requestformat;
+		_requestheadertypes = other._requestheadertypes;
+	}
+
+	return *this;
 }
 
 void Request::setLine() {

@@ -229,7 +229,7 @@ void Server::run()
 								killConnection(fd);
 								continue;
 							}
-//							FD_CLR(fd, &_readfds);
+							FD_CLR(fd, &_readfds);
 						}
 
 						// Un client existant nous fait une requête (GET)
@@ -255,7 +255,6 @@ void Server::run()
 								killConnection(fd);
 								continue;
 							}
-							usleep(500);
 							killConnection(fd);
 							break;
 						}
@@ -277,13 +276,11 @@ void Server::newConnection(int fd)
 	socklen_t addr_size;
 	addr_size = sizeof their_addr;
 
-
-//	FD_CLR(fd, &_readfds); //->Cette ligne bloque le fait que la requete n'entre jamais en tant que lecture, donc nous ne recevons jamais la requete HTTP
 	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
 		std::cout << "Client : " <<  it->first << " sur le port : " << it->second->getFdPort() << std::endl;
 		std::cout << "Recherche avec FD : " << fd << std::endl;
-		if (fd == it->first) {
+		if (fd == it->second->getFd()) {
 			std::cout << "Le client existe deja avec port : " << it->first << std::endl;
 			return;
 		}
@@ -295,10 +292,11 @@ void Server::newConnection(int fd)
 	if (newfd == -1) {
 		return;
 	}
-//	std::string addr = addressToString(their_addr);
+
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
 	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, fd);
+
 	std::cout << "Les clients apres ajout ->";
 	Ft::printClient(_clients);
 }

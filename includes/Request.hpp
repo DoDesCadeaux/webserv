@@ -20,6 +20,7 @@ private:
 public:
 	Request();
 	Request(const std::string &requestformat);
+	Request &operator=(const Request &other);
 
 	const std::string	&getFormat() const;
 	const std::string	&getLineRequest() const;
