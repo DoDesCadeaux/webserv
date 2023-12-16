@@ -5,6 +5,8 @@ Client::Client(int fd, struct sockaddr_storage addr, bool connect, int fdport) {
     _addr = addr;
     _connect = connect;
     _fdport = fdport;
+	_keepalive = false;
+	_lastactivity = time(NULL);
 }
 
 const std::string &Client::getRequestLine() const {
@@ -33,4 +35,22 @@ const int &Client::getFdPort() const {
 
 const int &Client::getFd() const {
     return _fd;
+}
+
+bool Client::isKeepAlive() const {
+	return _keepalive;
+}
+
+void Client::setKeepAlive(bool ka) {
+	_keepalive = ka;
+}
+
+void Client::resetKeepAliveTimer() {
+	_lastactivity = time(NULL);
+}
+
+bool Client::hasKeepAliveTimedOut(int timeoutSeconds) const {
+	time_t now = time(NULL);
+	double elapsed = difftime(now, _lastactivity);
+	return elapsed > timeoutSeconds;
 }

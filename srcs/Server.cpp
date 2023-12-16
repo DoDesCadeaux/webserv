@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Server.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: pamartin <pamartin@student.s19.be>         +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2023/11/30 13:03:54 by pamartin          #+#    #+#             */
-/*   Updated: 2023/11/30 13:03:55 by pamartin         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../includes/Server.hpp"
 
 Server::Server()
@@ -75,7 +63,7 @@ void Server::setSocket()
 			exit(3);
 		}
 
-		if (listen(server_fd, 10) < 0)
+		if (listen(server_fd, 1000) < 0)
 		{
 			perror("Listen");
 			// exit(EXIT_FAILURE);
@@ -138,7 +126,11 @@ int Server::recvAll(const int &fd)
 	{
 		Request request(requestformat);
 		_clients[fd]->setClientRequest(request);
-		std::cout << "CLIENT REQUEST LINE : [" << _clients[fd]->getRequestLine() << "]" << std::endl;
+		if (request.getHeader("Connection") == "keep-alive") {
+			_clients[fd]->setKeepAlive(true);
+		} else {
+			_clients[fd]->setKeepAlive(false);
+		}
 	}
 	return (bytesRead);
 }
@@ -176,10 +168,7 @@ int Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int
 	return (n == -1 ? -1 : 0);
 }
 
-void Server::run()
-{
-	// struct sockaddr_storage their_addr;
-	// socklen_t addr_size;
+void Server::run() {
 	int res;
 	struct timeval timeout;
 
@@ -189,84 +178,71 @@ void Server::run()
 	while (true) {
 		_readfds = _allfds;
 		_writefds = _allfds;
+
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
-//	Ft::printSet(_readfds, "Select READ fd");
-//	Ft::printSet(_allfds, "Select ALL fd");
-//	Ft::printSet(_writefds, "Select WRITE fd");
-//	Ft::printClient(_clients);
-		if (res == -1)
+		if (res == -1) {
 			std::cout << "error" << std::endl;
-		else
-		{
-			for (int fd = 0; fd <= _maxfd; ++fd)
-			{
-				// Le fd est-il lié à notre programme?
-				if (FD_ISSET(fd, &_allfds))
-				{
-					// Un nouveau client veut créer une connexion
+		} else {
+			std::vector<int> fdsToRemove;
+
+			for (int fd = 0; fd <= _maxfd; ++fd) {
+				if (FD_ISSET(fd, &_allfds)) {
 					if (FD_ISSET(fd, &_readfds))
 						newConnection(fd);
 
-					// Le client est connecté
-					for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
-					{
-						if (it->second->getFd() == fd)
-						{
+					if (_clients.find(fd) != _clients.end()) {
+						if (FD_ISSET(fd, &_readfds)) {
+							if (recvAll(fd) == -1) {
+								perror("recvAll()");
+								std::cout << "echec avec le fd :" << fd << std::endl;
+								fdsToRemove.push_back(fd); // Marquez pour suppression
+								continue;
+							}
+							FD_CLR(fd, &_readfds);
+						}
 
-//							std::cout << GREEN <<"FD CLIENT : [" << it->second->getFd() << "]" << NOCOL << std::endl;
-//							Ft::printSet(_readfds, "recv read fd");
+						if (FD_ISSET(fd, &_writefds)) {
+							std::string uri = _clients[fd]->getRequestUri();
+							std::string htmlContent = getResourceContent(fd);
+							std::string mimeType = getMimeType(uri);
+							std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent, mimeType);
+							unsigned int len = strlen(httpResponse.c_str());
 
-							// Un client existant nous envoie une requête (PUSH)
-							if (FD_ISSET(fd, &_readfds))
-							{
-//								std::cout << "dans recv avec : [" << fd << "]" << std::endl;
-								if (recvAll(fd) == -1)
-								{
-									perror("recvAll()");
-									std::cout << "echec avec le fd :" << fd << std::endl;
-									killConnection(fd);
-									continue;
-								}
-								FD_CLR(fd, &_readfds);
+							std::cout << httpResponse << std::endl;
+
+							if (sendAll(fd, httpResponse, &len) == -1) {
+								perror("sendall");
+								printf("We only sent %d bytes because of the error!\n", len);
+								fdsToRemove.push_back(fd); // Marquez pour suppression
+								continue;
 							}
 
-							// Un client existant nous fait une requête (GET)
-//						Ft::printSet(_readfds, "read");
-//						Ft::printSet(_writefds, "write");
-							if (FD_ISSET(fd, &_writefds))
-							{
-								//Factoriser --> Dorian
-								// Envoyer le contenu du fichier index.html dans cette variable
-								std::string htmlContent = getResourceContent(fd);
-								// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
-								std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent);
-								unsigned int len = strlen(httpResponse.c_str());
-								//Creer une fct 'responder' qui se charge de interpréter la demande du client :
-								// 1) Demande accès à un fichier accessible sur notre serveur --> sendAll()
-								// 2) Demande de delete un fichier accessible sur notre serveur --> deleteFile()
-								// 3) CGI --> cgiHandler()
-								//Pas oublier de toujours récup la valeur return et vérifier s'il y a eu une erreur
-								if (sendAll(fd, httpResponse, &len) == -1)
-								{
-									perror("sendall");
-									printf("We only sent %d bytes because of the error!\n", len);
-									killConnection(fd);
-									continue;
-								}
-								killConnection(fd);
-								break;
-							}
+							if (!_clients[fd]->isKeepAlive())
+								fdsToRemove.push_back(fd);
+							else
+								_clients[fd]->resetKeepAliveTimer();
 						}
 					}
 				}
 			}
+
+			// Supprimez les clients marqués pour suppression
+			for (size_t i = 0; i < fdsToRemove.size(); ++i) {
+				killConnection(fdsToRemove[i]);
+				_clients.erase(fdsToRemove[i]);
+			}
+
+			// Gestion des timeouts pour les connexions keep-alive
+			for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end();) {
+				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT)) {
+					killConnection(it->first);
+					_clients.erase(it++); // Supprimez le client et avancez l'itérateur de manière sûre
+				} else {
+					++it;
+				}
+			}
 		}
 	}
-	// TO DO :
-	// if a recv/send error occured,
-	// we need to close the active connection,
-	// remove it from the master_set and decrease the value of
-	// max socket in the master set
 }
 
 void Server::newConnection(const int &fd)
@@ -277,8 +253,6 @@ void Server::newConnection(const int &fd)
 
 	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
-//		std::cout << "Client : " <<  it->first << " sur le port : " << it->second->getFdPort() << std::endl;
-//		std::cout << "Recherche avec FD : " << fd << std::endl;
 		if (fd == it->second->getFdPort()) {
 			std::cout << "Le client existe deja avec port : " << it->first << std::endl;
 			return;
@@ -295,9 +269,6 @@ void Server::newConnection(const int &fd)
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
 	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, fd);
-
-//	std::cout << "Les clients apres ajout ->";
-//	Ft::printClient(_clients);
 }
 
 void Server::killConnection(const int &fd)
@@ -316,10 +287,20 @@ void Server::killConnection(const int &fd)
 
 std::string Server::getResourceContent(const int &fd) {
 	std::string uri = _clients[fd]->getRequestUri();
-	std::string fullpath = SERVER_ROOT + uri;
+	std::string fullpath;
+
+	std::cout << RED << "URI : [" << uri << "]" << NOCOL << std::endl;
 
 	if (uri == "/" || uri == "/index") {
 		fullpath = "web/index.html";
+	} else if (uri == "/favicon.ico") {
+		fullpath = "web/favicon.ico";
+	} else {
+		// Ajouter .html par défaut si aucune extension n'est présente
+		if (uri.find('.') == std::string::npos) {
+			uri += ".html";
+		}
+		fullpath = "web" + uri;
 	}
 
 	if (!Ft::fileExists(fullpath)) {
@@ -329,11 +310,23 @@ std::string Server::getResourceContent(const int &fd) {
 			return content;
 		}
 	} else {
-		std::ifstream file(fullpath, std::ifstream::binary);
+		std::ifstream file(fullpath, std::ios::binary);
 		if (file) {
 			std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 			return content;
 		}
 	}
-	return NULL;
+	return "";
 }
+
+std::string Server::getMimeType(const std::string& uri) {
+	if (Ft::endsWith(uri, ".html")) {
+		return "text/html";
+	} else if (Ft::endsWith(uri, ".ico")) {
+		return "image/x-icon";
+	}
+	// Ajoutez d'autres types MIME au besoin
+	return "text/html";
+}
+
+

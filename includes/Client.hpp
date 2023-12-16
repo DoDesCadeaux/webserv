@@ -1,5 +1,6 @@
 #ifndef CLIENT_HPP
 # define CLIENT_HPP
+# define KEEP_ALIVE_TIMEOUT 5
 
 #include <iostream>
 #include <sys/socket.h>
@@ -13,6 +14,8 @@ private:
 	bool					_connect;
 	int						_fdport;
 	Request					_clientrequest;
+	bool 					_keepalive;
+	time_t					_lastactivity;
 
 public:
 	Client(int fd, struct sockaddr_storage addr, bool connect, int fdport);
@@ -26,6 +29,13 @@ public:
 	const std::string &getRequestUri() const;
 	const std::string &getRequestFormat() const;
 
+	void setKeepAlive(bool ka);
+
+	bool isKeepAlive() const;
+
+	void resetKeepAliveTimer();
+
+	bool hasKeepAliveTimedOut(int timeoutSeconds) const;
 };
 
 #endif

@@ -10,7 +10,7 @@ private:
 	HttpResponse();
 
 public:
-	static std::string getResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent);
+	static std::string getResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent, const std::string &mimeType);
 
 };
 

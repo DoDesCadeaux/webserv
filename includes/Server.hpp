@@ -50,7 +50,8 @@ class Server
 		int		recvAll(const int &fd);
 		void	newConnection(const int &fd);
 		void	killConnection(const int &fd);
-		std::string getResourceContent(const int &fd);
+		std::string	getResourceContent(const int &fd);
+		static std::string	getMimeType(const std::string& uri);
 		// void	accept();
 		// kill conmnexion
 		// run server avec le select

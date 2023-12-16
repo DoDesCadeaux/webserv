@@ -108,3 +108,12 @@ const std::string &Request::getProtocol() const {
 const std::string &Request::getUri() const {
 	return _requesturi;
 }
+
+const std::string Request::getHeader(const std::string &headertype) const {
+	std::map<std::string, std::string>::const_iterator it = _requestheadertypes.find(headertype);
+	if (it != _requestheadertypes.end())
+		return it->second;
+	else
+		return std::string(" ");
+}
+

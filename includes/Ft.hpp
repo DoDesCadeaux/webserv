@@ -16,6 +16,7 @@ class Ft{
 		static void printSet(const fd_set &set, const std::string &name);
 		static void printClient(const std::map<int, Client *> &clients);
 		static bool fileExists(const std::string& filePath);
+		static bool endsWith(const std::string& str, const std::string& suffix);
 };
 
 //QUID de la valeur de retour d'erreur
