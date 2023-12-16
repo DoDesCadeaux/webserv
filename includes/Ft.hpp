@@ -13,8 +13,8 @@ class Ft{
 	public:
 		template <class T>
 		static int print(std::string msg, T elem, int err);
-		static void printSet(fd_set set, std::string name);
-		static void printClient(std::map<int, Client *> clients);
+		static void printSet(const fd_set &set, const std::string &name);
+		static void printClient(const std::map<int, Client *> &clients);
 		static bool fileExists(const std::string& filePath);
 };
 

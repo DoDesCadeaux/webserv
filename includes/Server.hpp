@@ -32,8 +32,6 @@ class Server
 		fd_set							_readfds;
 		fd_set							_writefds;
 		int 							_maxfd;
-		std::string						_requestformat;
-		std::string						_requesturi;
 		// int								_nbclient = 0;
 		std::map<int, Client*>			_clients;
 		//	std::vector<int>				_clients;
@@ -47,11 +45,11 @@ class Server
 		void	addFd(int fd);
 		void	removeFd(int fd);
 		void	run();
-		int		sendAll(int fd,  const std::string &httpResponse, unsigned int *len);
-		int		recvAll(int fd);
-		void	newConnection(int fd);
-		void	killConnection(int fd);
-		std::string getResourceContent();
+		int		sendAll(const int &fd,  const std::string &httpResponse, unsigned int *len);
+		int		recvAll(const int &fd);
+		void	newConnection(const int &fd);
+		void	killConnection(const int &fd);
+		std::string getResourceContent(const int &fd);
 		// void	accept();
 		// kill conmnexion
 		// run server avec le select

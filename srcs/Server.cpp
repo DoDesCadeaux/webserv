@@ -115,13 +115,13 @@ void Server::removeFd(int fd) {
 // Continuer à appeler recv() jusqu'à ce que tout le contenu soit lu ou qu'il y ait une erreur/fermeture de la connexion
 // Analyse ensuite la requête reçue
 // Retourne la valeur de l'erreur ou le nombre d'octets lus lors du dernier recv()
-int Server::recvAll(int fd)
+int Server::recvAll(const int &fd)
 {
 	ssize_t bytesRead = BUFFER_SIZE - 1;
 	char tmp[BUFFER_SIZE];
 	FD_CLR(fd, &_readfds);
+	std::string	requestformat;
 
-	_requestformat.clear();
 	// Lire les données entrantes jusqu'à ce qu'il n'y ait plus rien à lire
 	while (bytesRead == BUFFER_SIZE - 1)
 	{
@@ -130,23 +130,22 @@ int Server::recvAll(int fd)
 		if (bytesRead > 0)
 		{
 			tmp[bytesRead] = '\0';
-			_requestformat += tmp;
+			requestformat += tmp;
 		}
 		else
 			return (-1);
 	}
 
-	if (!_requestformat.empty())
+	if (!requestformat.empty())
 	{
-		Request request(_requestformat);
+		Request request(requestformat);
 		_clients[fd]->setClientRequest(request);
-		_requesturi = request.getUri();
 		std::cout << "CLIENT REQUEST LINE : [" << _clients[fd]->getRequestLine() << "]" << std::endl;
 	}
 	return (bytesRead);
 }
 
-int Server::sendAll(int fd, const std::string &httpResponse, unsigned int *len)
+int Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int *len)
 {
 	unsigned int total = 0;
 	int bytesleft = *len;
@@ -193,10 +192,10 @@ void Server::run()
 	_writefds = _allfds;
 
 	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
-	Ft::printSet(_readfds, "Select READ fd");
-	Ft::printSet(_allfds, "Select ALL fd");
-	Ft::printSet(_writefds, "Select WRITE fd");
-	Ft::printClient(_clients);
+//	Ft::printSet(_readfds, "Select READ fd");
+//	Ft::printSet(_allfds, "Select ALL fd");
+//	Ft::printSet(_writefds, "Select WRITE fd");
+//	Ft::printClient(_clients);
 	if (res == -1)
 		std::cout << "error" << std::endl;
 	else
@@ -240,7 +239,7 @@ void Server::run()
 						{
 						//Factoriser --> Dorian
 							// Envoyer le contenu du fichier index.html dans cette variable
-							std::string htmlContent = getResourceContent();
+							std::string htmlContent = getResourceContent(fd);
 							// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
 							std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent);
 							unsigned int len = strlen(httpResponse.c_str());
@@ -271,7 +270,7 @@ void Server::run()
 	// max socket in the master set
 }
 
-void Server::newConnection(int fd)
+void Server::newConnection(const int &fd)
 {
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size;
@@ -302,7 +301,7 @@ void Server::newConnection(int fd)
 	Ft::printClient(_clients);
 }
 
-void Server::killConnection(int fd)
+void Server::killConnection(const int &fd)
 {
 	std::map<int, Client *>::iterator it = _clients.find(fd);
 
@@ -315,8 +314,8 @@ void Server::killConnection(int fd)
 	removeFd(fd);
 }
 
-std::string Server::getResourceContent() {
-	std::string uri = _requesturi;
+std::string Server::getResourceContent(const int &fd) {
+	std::string uri = _clients[fd]->getRequestUri();
 	std::string fullpath = SERVER_ROOT + uri;
 
 	if (uri == "/" || uri == "/index") {

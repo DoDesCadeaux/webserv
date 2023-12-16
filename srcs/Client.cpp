@@ -27,10 +27,10 @@ void Client::setClientRequest(const Request &requesttoset) {
 	_clientrequest = requesttoset;
 }
 
-int Client::getFdPort() const {
+const int &Client::getFdPort() const {
     return _fdport;
 }
 
-int Client::getFd() const {
+const int &Client::getFd() const {
     return _fd;
 }

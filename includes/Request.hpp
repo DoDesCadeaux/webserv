@@ -27,7 +27,7 @@ public:
 	const std::string	&getProtocol() const;
 	const std::string	&getUri() const;
 
-	void 		displayHeaderTypes() const;
+	void		displayHeaderTypes() const;
 
 	void		setupRequest();
 

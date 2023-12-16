@@ -17,8 +17,8 @@ private:
 public:
 	Client(int fd, struct sockaddr_storage addr, bool connect, int fdport);
 	void	setClientRequest(const Request &requesttoset);
-	int		getFdPort() const;
-	int		getFd() const;
+	const int		&getFdPort() const;
+	const int		&getFd() const;
 
 	const std::string &getRequestLine() const;
 
