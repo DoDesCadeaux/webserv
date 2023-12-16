@@ -9,11 +9,7 @@ int main(int argc, char **argv) {
 		return (EXIT_FAILURE);
 
 	Server server;
-	server.setSocket();
 
-	unsigned int i = 0;
-	while (true) {
-		std::cout << "\t\t\t -> Tour :" << i++ << std::endl;
-		server.run();
-	}
+	server.setSocket();
+	server.run();
 }

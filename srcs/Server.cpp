@@ -66,8 +66,6 @@ void Server::setSocket()
 			exit(1);
 		}
 
-
-
 		// Attribution du socket au port
 		if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0)
 		{
@@ -185,78 +183,81 @@ void Server::run()
 	int res;
 	struct timeval timeout;
 
-	timeout.tv_sec = 1;
+	timeout.tv_sec = 3;
 	timeout.tv_usec = 0;
 
-	_readfds = _allfds;
-	_writefds = _allfds;
-
-	res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
+	unsigned int i = 0;
+	while (true) {
+		_readfds = _allfds;
+		_writefds = _allfds;
+		std::cout << "\t\t\t -> Tour :" << i++ << std::endl;
+		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 //	Ft::printSet(_readfds, "Select READ fd");
 //	Ft::printSet(_allfds, "Select ALL fd");
 //	Ft::printSet(_writefds, "Select WRITE fd");
 //	Ft::printClient(_clients);
-	if (res == -1)
-		std::cout << "error" << std::endl;
-	else
-	{
-		for (int fd = 0; fd <= _maxfd; ++fd)
+		if (res == -1)
+			std::cout << "error" << std::endl;
+		else
 		{
-			// Le fd est-il lié à notre programme?
-			if (FD_ISSET(fd, &_allfds))
+			for (int fd = 0; fd <= _maxfd; ++fd)
 			{
-				// Un nouveau client veut créer une connexion
-				if (FD_ISSET(fd, &_readfds))
-					newConnection(fd);
-
-				// Le client est connecté
-				for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
+				// Le fd est-il lié à notre programme?
+				if (FD_ISSET(fd, &_allfds))
 				{
-					if (it->second->getFd() == fd)
+					// Un nouveau client veut créer une connexion
+					if (FD_ISSET(fd, &_readfds))
+						newConnection(fd);
+
+					// Le client est connecté
+					for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 					{
-
-						std::cout << GREEN <<"FD CLIENT : [" << it->second->getFd() << "]" << NOCOL << std::endl;
-						Ft::printSet(_readfds, "recv read fd");
-
-						// Un client existant nous envoie une requête (PUSH)
-						if (FD_ISSET(fd, &_readfds))
+						if (it->second->getFd() == fd)
 						{
-							std::cout << "dans recv avec : [" << fd << "]" << std::endl;
-							if (recvAll(fd) == -1)
-							{
-								perror("recvAll()");
-								std::cout << "echec avec le fd :" << fd << std::endl;
-								killConnection(fd);
-								continue;
-							}
-							FD_CLR(fd, &_readfds);
-						}
 
-						// Un client existant nous fait une requête (GET)
+//							std::cout << GREEN <<"FD CLIENT : [" << it->second->getFd() << "]" << NOCOL << std::endl;
+//							Ft::printSet(_readfds, "recv read fd");
+
+							// Un client existant nous envoie une requête (PUSH)
+							if (FD_ISSET(fd, &_readfds))
+							{
+//								std::cout << "dans recv avec : [" << fd << "]" << std::endl;
+								if (recvAll(fd) == -1)
+								{
+									perror("recvAll()");
+									std::cout << "echec avec le fd :" << fd << std::endl;
+									killConnection(fd);
+									continue;
+								}
+								FD_CLR(fd, &_readfds);
+							}
+
+							// Un client existant nous fait une requête (GET)
 //						Ft::printSet(_readfds, "read");
 //						Ft::printSet(_writefds, "write");
-						if (FD_ISSET(fd, &_writefds))
-						{
-						//Factoriser --> Dorian
-							// Envoyer le contenu du fichier index.html dans cette variable
-							std::string htmlContent = getResourceContent(fd);
-							// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
-							std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent);
-							unsigned int len = strlen(httpResponse.c_str());
-							//Creer une fct 'responder' qui se charge de interpréter la demande du client :
+							if (FD_ISSET(fd, &_writefds))
+							{
+								//Factoriser --> Dorian
+								// Envoyer le contenu du fichier index.html dans cette variable
+								std::string htmlContent = getResourceContent(fd);
+								// Ecrire la reponse code HTTP étant OK (200) avec le type de contenu (type html utf-8) et la taille
+								std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent);
+								unsigned int len = strlen(httpResponse.c_str());
+								//Creer une fct 'responder' qui se charge de interpréter la demande du client :
 								// 1) Demande accès à un fichier accessible sur notre serveur --> sendAll()
 								// 2) Demande de delete un fichier accessible sur notre serveur --> deleteFile()
 								// 3) CGI --> cgiHandler()
-							//Pas oublier de toujours récup la valeur return et vérifier s'il y a eu une erreur 
-							if (sendAll(fd, httpResponse, &len) == -1)
-							{
-								perror("sendall");
-								printf("We only sent %d bytes because of the error!\n", len);
+								//Pas oublier de toujours récup la valeur return et vérifier s'il y a eu une erreur
+								if (sendAll(fd, httpResponse, &len) == -1)
+								{
+									perror("sendall");
+									printf("We only sent %d bytes because of the error!\n", len);
+									killConnection(fd);
+									continue;
+								}
 								killConnection(fd);
-								continue;
+								break;
 							}
-							killConnection(fd);
-							break;
 						}
 					}
 				}
@@ -278,8 +279,8 @@ void Server::newConnection(const int &fd)
 
 	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
-		std::cout << "Client : " <<  it->first << " sur le port : " << it->second->getFdPort() << std::endl;
-		std::cout << "Recherche avec FD : " << fd << std::endl;
+//		std::cout << "Client : " <<  it->first << " sur le port : " << it->second->getFdPort() << std::endl;
+//		std::cout << "Recherche avec FD : " << fd << std::endl;
 		if (fd == it->second->getFdPort()) {
 			std::cout << "Le client existe deja avec port : " << it->first << std::endl;
 			return;
@@ -297,8 +298,8 @@ void Server::newConnection(const int &fd)
 	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, fd);
 
-	std::cout << "Les clients apres ajout ->";
-	Ft::printClient(_clients);
+//	std::cout << "Les clients apres ajout ->";
+//	Ft::printClient(_clients);
 }
 
 void Server::killConnection(const int &fd)
