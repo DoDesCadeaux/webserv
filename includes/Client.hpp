@@ -20,6 +20,12 @@ public:
 	int		getFdPort() const;
 	int		getFd() const;
 
+	const std::string &getRequestLine() const;
+
+	const std::string &getRequestProtocol() const;
+	const std::string &getRequestUri() const;
+	const std::string &getRequestFormat() const;
+
 };
 
 #endif

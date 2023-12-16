@@ -139,8 +139,9 @@ int Server::recvAll(int fd)
 	if (!_requestformat.empty())
 	{
 		Request request(_requestformat);
+		_clients[fd]->setClientRequest(request);
 		_requesturi = request.getUri();
-		std::cout << _requestformat << std::endl;
+		std::cout << "CLIENT REQUEST LINE : [" << _clients[fd]->getRequestLine() << "]" << std::endl;
 	}
 	return (bytesRead);
 }
@@ -280,7 +281,7 @@ void Server::newConnection(int fd)
 	{
 		std::cout << "Client : " <<  it->first << " sur le port : " << it->second->getFdPort() << std::endl;
 		std::cout << "Recherche avec FD : " << fd << std::endl;
-		if (fd == it->second->getFd()) {
+		if (fd == it->second->getFdPort()) {
 			std::cout << "Le client existe deja avec port : " << it->first << std::endl;
 			return;
 		}

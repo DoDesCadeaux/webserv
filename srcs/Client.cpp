@@ -7,6 +7,22 @@ Client::Client(int fd, struct sockaddr_storage addr, bool connect, int fdport) {
     _fdport = fdport;
 }
 
+const std::string &Client::getRequestLine() const {
+	return _clientrequest.getLineRequest();
+}
+
+const std::string &Client::getRequestProtocol() const {
+	return _clientrequest.getLineRequest();
+}
+
+const std::string &Client::getRequestUri() const {
+	return _clientrequest.getUri();
+}
+
+const std::string &Client::getRequestFormat() const {
+	return _clientrequest.getFormat();
+}
+
 void Client::setClientRequest(const Request &requesttoset) {
 	_clientrequest = requesttoset;
 }
