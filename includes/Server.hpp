@@ -20,6 +20,7 @@
 # define SERVER_ROOT "web"
 # define GREEN "\e[32m"
 # define NOCOL "\e[39m"
+# define RED "\e[91m"
 
 class Client;
 

@@ -5,7 +5,7 @@
 
 NAME	= webserv
 CC 		= c++
-CFLAGS	= -Wall -Wextra -Werror -std=c++98
+CFLAGS	= -Wall -Wextra -Werror -std=c++98 -O3
 DFLAGS	= -MMD -MF $(@:.o=.d)
 AUTHOR	= dduraku pamartin tverdood
 DATE	= dd/mm/yyyy

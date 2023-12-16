@@ -186,11 +186,9 @@ void Server::run()
 	timeout.tv_sec = 3;
 	timeout.tv_usec = 0;
 
-	unsigned int i = 0;
 	while (true) {
 		_readfds = _allfds;
 		_writefds = _allfds;
-		std::cout << "\t\t\t -> Tour :" << i++ << std::endl;
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 //	Ft::printSet(_readfds, "Select READ fd");
 //	Ft::printSet(_allfds, "Select ALL fd");
@@ -287,12 +285,12 @@ void Server::newConnection(const int &fd)
 		}
 	}
 
-	Ft::printSet(_readfds, "New Co read fd");
-
 	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
 	if (newfd == -1) {
 		return;
 	}
+
+	std::cout << GREEN << "New Client connected : " << newfd << NOCOL << std::endl;
 
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
 	addFd(newfd);
@@ -311,6 +309,7 @@ void Server::killConnection(const int &fd)
 		delete it->second; // Supprimer l'objet pointé, si nécessaire
 		_clients.erase(fd);  // Supprimer l'entrée de la map
 	}
+	std::cout << RED << "Client disconnected : " << fd << NOCOL << std::endl;
 	close(fd);
 	removeFd(fd);
 }
