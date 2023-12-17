@@ -17,3 +17,13 @@ std::string HttpResponse::getResponse(int statuscode, const std::string &statusm
 	return response;
 }
 
+std::string HttpResponse::getErrorResponse(int statuscode, const std::string &statusmessage) {
+	std::string body = "<html><body><h1>" + statusmessage + "</h1></body></html>";
+	std::string response = "HTTP/1.1 " + std::to_string(statuscode) + " " + statusmessage + "\r\n" +
+						   "Content-Type: text/html\r\n" +
+						   "Content-Length: " + std::to_string(body.length()) + "\r\n" +
+						   "\r\n" +
+						   body;
+	return response;
+}
+

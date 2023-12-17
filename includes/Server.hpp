@@ -34,9 +34,6 @@ class Server
 		fd_set							_writefds;
 		int 							_maxfd;
 		std::map<int, Client*>			_clients;
-		//	std::vector<int>				_clients;
-		// container? workers; => List de res de socket()
-		// container? client: => List de res de accept()
 
 	public:
 		Server();
@@ -50,14 +47,9 @@ class Server
 		int		recvAll(const int &fd);
 		void	newConnection(const int &fd);
 		void	killConnection(const int &fd);
-		std::string	getResourceContent(const int &fd);
+		static std::string getResourceContent(const std::string &uri);
 		static std::string	getMimeType(const std::string& uri);
-		// void	accept();
-		// kill conmnexion
-		// run server avec le select
-		// revc
-		// send
-		// update fd_set
+
 };
 
 #endif

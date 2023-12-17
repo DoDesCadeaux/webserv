@@ -193,6 +193,7 @@ void Server::run() {
 
 			for (int fd = 0; fd <= _maxfd; ++fd) {
 				if (std::find(_listfds.begin(), _listfds.end(), fd) != _listfds.end() && FD_ISSET(fd, &_readfds)) {
+					usleep(500);
 					newConnection(fd);
 				}
 				else if (_clients.find(fd) != _clients.end()) {
@@ -208,17 +209,24 @@ void Server::run() {
 
 					if (FD_ISSET(fd, &_writefds)) {
 						std::string uri = _clients[fd]->getRequestUri();
-						std::string htmlContent = getResourceContent(fd);
-						std::string mimeType = getMimeType(uri);
-						std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent, mimeType);
-						unsigned int len = strlen(httpResponse.c_str());
+						std::string content = getResourceContent(uri);
 
-						std::cout << httpResponse << std::endl;
+						std::cout << GREEN << uri << NOCOL << std::endl;
 
+						std::string httpResponse;
+						if (content.empty()) {
+							// Générer une réponse d'erreur 404
+							httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
+						} else {
+							std::string mimeType = getMimeType(uri);
+							httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
+						}
+
+						unsigned int len = httpResponse.length();
 						if (sendAll(fd, httpResponse, &len) == -1) {
 							perror("sendall");
 							printf("We only sent %d bytes because of the error!\n", len);
-							fdsToRemove.push_back(fd); // Marquez pour suppression
+							fdsToRemove.push_back(fd);
 							continue;
 						}
 
@@ -263,6 +271,8 @@ void Server::newConnection(const int &listen_fd) {
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
 	addClientFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, listen_fd);
+
+	std::cout << GREEN << "New client : " << newfd << NOCOL << std::endl;
 }
 
 void Server::killConnection(const int &fd)
@@ -279,37 +289,25 @@ void Server::killConnection(const int &fd)
 	removeFd(fd);
 }
 
-std::string Server::getResourceContent(const int &fd) {
-	std::string uri = _clients[fd]->getRequestUri();
-	std::string fullpath;
-
-	std::cout << RED << "URI : [" << uri << "]" << NOCOL << std::endl;
+std::string Server::getResourceContent(const std::string &uri) {
+	std::string fullpath = SERVER_ROOT;
 
 	if (uri == "/" || uri == "/index") {
-		fullpath = "web/index.html";
+		fullpath += "/index.html";
 	} else if (uri == "/favicon.ico") {
-		fullpath = "web/favicon.ico";
+		fullpath += "/favicon.ico";
 	} else {
-		// Ajouter .html par défaut si aucune extension n'est présente
+		fullpath += uri;
 		if (uri.find('.') == std::string::npos) {
-			uri += ".html";
+			fullpath += ".html";
 		}
-		fullpath = "web" + uri;
 	}
 
-	if (!Ft::fileExists(fullpath)) {
-		std::ifstream file("web/notFound.html", std::ifstream::binary);
-		if (file) {
-			std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-			return content;
-		}
-	} else {
-		std::ifstream file(fullpath, std::ios::binary);
-		if (file) {
-			std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-			return content;
-		}
+	if (Ft::fileExists(fullpath)) {
+		std::ifstream file(fullpath.c_str(), std::ios::binary);
+		return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	}
+
 	return "";
 }
 
@@ -322,5 +320,3 @@ std::string Server::getMimeType(const std::string& uri) {
 	// Ajoutez d'autres types MIME au besoin
 	return "text/html";
 }
-
-
