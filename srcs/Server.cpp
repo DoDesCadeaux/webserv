@@ -76,8 +76,14 @@ void Server::setSocket()
 	// free le memset
 }
 
-void Server::addFd(int fd)
-{
+void Server::addClientFd(int fd) {
+	FD_SET(fd, &_allfds);
+	if (fd > _maxfd)
+		_maxfd = fd;
+}
+
+
+void Server::addFd(int fd) {
 	FD_SET(fd, &_allfds);
 	_listfds.push_back(fd);
 	_listfds.sort();
@@ -170,12 +176,12 @@ int Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int
 
 void Server::run() {
 	int res;
-	struct timeval timeout;
-
-	timeout.tv_sec = 3;
-	timeout.tv_usec = 0;
 
 	while (true) {
+		struct timeval timeout;
+
+		timeout.tv_sec = 3;
+		timeout.tv_usec = 0;
 		_readfds = _allfds;
 		_writefds = _allfds;
 
@@ -186,42 +192,40 @@ void Server::run() {
 			std::vector<int> fdsToRemove;
 
 			for (int fd = 0; fd <= _maxfd; ++fd) {
-				if (FD_ISSET(fd, &_allfds)) {
-					if (FD_ISSET(fd, &_readfds))
-						newConnection(fd);
+				if (std::find(_listfds.begin(), _listfds.end(), fd) != _listfds.end() && FD_ISSET(fd, &_readfds)) {
+					newConnection(fd);
+				}
+				else if (_clients.find(fd) != _clients.end()) {
+					if (FD_ISSET(fd, &_readfds)) {
+						if (recvAll(fd) == -1) {
+							perror("recvAll()");
+							std::cout << "echec avec le fd :" << fd << std::endl;
+							fdsToRemove.push_back(fd); // Marquez pour suppression
+							continue;
+						}
+						FD_CLR(fd, &_readfds);
+					}
 
-					if (_clients.find(fd) != _clients.end()) {
-						if (FD_ISSET(fd, &_readfds)) {
-							if (recvAll(fd) == -1) {
-								perror("recvAll()");
-								std::cout << "echec avec le fd :" << fd << std::endl;
-								fdsToRemove.push_back(fd); // Marquez pour suppression
-								continue;
-							}
-							FD_CLR(fd, &_readfds);
+					if (FD_ISSET(fd, &_writefds)) {
+						std::string uri = _clients[fd]->getRequestUri();
+						std::string htmlContent = getResourceContent(fd);
+						std::string mimeType = getMimeType(uri);
+						std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent, mimeType);
+						unsigned int len = strlen(httpResponse.c_str());
+
+						std::cout << httpResponse << std::endl;
+
+						if (sendAll(fd, httpResponse, &len) == -1) {
+							perror("sendall");
+							printf("We only sent %d bytes because of the error!\n", len);
+							fdsToRemove.push_back(fd); // Marquez pour suppression
+							continue;
 						}
 
-						if (FD_ISSET(fd, &_writefds)) {
-							std::string uri = _clients[fd]->getRequestUri();
-							std::string htmlContent = getResourceContent(fd);
-							std::string mimeType = getMimeType(uri);
-							std::string httpResponse = HttpResponse::getResponse(200, "OK", htmlContent, mimeType);
-							unsigned int len = strlen(httpResponse.c_str());
-
-							std::cout << httpResponse << std::endl;
-
-							if (sendAll(fd, httpResponse, &len) == -1) {
-								perror("sendall");
-								printf("We only sent %d bytes because of the error!\n", len);
-								fdsToRemove.push_back(fd); // Marquez pour suppression
-								continue;
-							}
-
-							if (!_clients[fd]->isKeepAlive())
-								fdsToRemove.push_back(fd);
-							else
-								_clients[fd]->resetKeepAliveTimer();
-						}
+						if (!_clients[fd]->isKeepAlive())
+							fdsToRemove.push_back(fd);
+						else
+							_clients[fd]->resetKeepAliveTimer();
 					}
 				}
 			}
@@ -230,6 +234,7 @@ void Server::run() {
 			for (size_t i = 0; i < fdsToRemove.size(); ++i) {
 				killConnection(fdsToRemove[i]);
 				_clients.erase(fdsToRemove[i]);
+				FD_CLR(fdsToRemove[i], &_allfds);
 			}
 
 			// Gestion des timeouts pour les connexions keep-alive
@@ -245,30 +250,19 @@ void Server::run() {
 	}
 }
 
-void Server::newConnection(const int &fd)
-{
+void Server::newConnection(const int &listen_fd) {
 	struct sockaddr_storage their_addr;
-	socklen_t addr_size;
-	addr_size = sizeof their_addr;
+	socklen_t addr_size = sizeof their_addr;
 
-	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
-	{
-		if (fd == it->second->getFdPort()) {
-			std::cout << "Le client existe deja avec port : " << it->first << std::endl;
-			return;
-		}
-	}
-
-	int newfd = accept(fd, (struct sockaddr *)&their_addr, &addr_size);
+	int newfd = accept(listen_fd, (struct sockaddr *)&their_addr, &addr_size);
 	if (newfd == -1) {
+		perror("accept");
 		return;
 	}
 
-	std::cout << GREEN << "New Client connected : " << newfd << NOCOL << std::endl;
-
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
-	addFd(newfd);
-	_clients[newfd] = new Client(newfd, their_addr, true, fd);
+	addClientFd(newfd);
+	_clients[newfd] = new Client(newfd, their_addr, true, listen_fd);
 }
 
 void Server::killConnection(const int &fd)

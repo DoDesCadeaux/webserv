@@ -33,7 +33,6 @@ class Server
 		fd_set							_readfds;
 		fd_set							_writefds;
 		int 							_maxfd;
-		// int								_nbclient = 0;
 		std::map<int, Client*>			_clients;
 		//	std::vector<int>				_clients;
 		// container? workers; => List de res de socket()
@@ -44,6 +43,7 @@ class Server
 		~Server();
 		void 	setSocket();
 		void	addFd(int fd);
+		void	addClientFd(int fd);
 		void	removeFd(int fd);
 		void	run();
 		int		sendAll(const int &fd,  const std::string &httpResponse, unsigned int *len);
