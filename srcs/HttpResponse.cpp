@@ -6,6 +6,7 @@ std::string HttpResponse::getResponse(int statuscode, const std::string &statusm
 
 	headers["Content-Type"] = mimeType; // Utilisez le type MIME fourni
 	headers["Content-Length"] = std::to_string(bodycontent.size());
+	headers["Connection"] = "close";
 
 	std::string response = statusline;
 	for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it) {
