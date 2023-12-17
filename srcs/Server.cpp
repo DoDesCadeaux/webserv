@@ -102,30 +102,30 @@ void	Server::removeFd(int fd) {
 		_maxfd = _listfds.back();
 }
 
-int		Server::recvAll(const int &fd)
-{
-	ssize_t bytesRead = BUFFER_SIZE - 1;
+int Server::recvAll(const int &fd) {
+	std::vector<char> buffer;
+	ssize_t bytesRead;
 	char tmp[BUFFER_SIZE];
-	FD_CLR(fd, &_readfds);
-	std::string	requestformat;
 
-	// Lire les données entrantes jusqu'à ce qu'il n'y ait plus rien à lire
-	while (bytesRead == BUFFER_SIZE - 1)
-	{
-		// Avec MSG_DONTWAIT recv ne bloquera pas la socket s'il n'y a rien à lire
-		bytesRead = recv(fd, tmp, BUFFER_SIZE - 1, MSG_DONTWAIT);
-		if (bytesRead > 0)
-		{
-			tmp[bytesRead] = '\0';
-			requestformat += tmp;
+	while (true) {
+		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
+		if (bytesRead > 0) {
+			buffer.insert(buffer.end(), tmp, tmp + bytesRead);
+		} else if (bytesRead == 0) {
+			// La connexion a été fermée
+			break;
+		} else {
+			// Erreur ou non-disponibilité des données
+			if (errno != EAGAIN && errno != EWOULDBLOCK) {
+				std::cerr << "Erreur recv: " << std::strerror(errno) << std::endl;
+				return -1;
+			}
+			break;
 		}
-		else
-			return (-1);
 	}
 
-	if (!requestformat.empty())
-	{
-		Request request(requestformat);
+	if (!buffer.empty()) {
+		Request request(std::string(buffer.begin(), buffer.end()));
 		_clients[fd]->setClientRequest(request);
 		if (request.getHeader("Connection") == "keep-alive") {
 			_clients[fd]->setKeepAlive(true);
@@ -133,7 +133,8 @@ int		Server::recvAll(const int &fd)
 			_clients[fd]->setKeepAlive(false);
 		}
 	}
-	return (bytesRead);
+
+	return buffer.size();
 }
 
 int		Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int *len)
@@ -257,21 +258,21 @@ void	Server::run() {
 	}
 }
 
-std::string Server::generateRandomFileName(const std::string& extension) {
-	// Obtenir l'heure actuelle
-	std::time_t currentTime = std::time(NULL);
-
-	// Générer un nombre aléatoire
-	int randomNum = std::rand();
-
-	// Créer un nom de fichier basé sur l'heure et le nombre aléatoire
-	std::string fileName = "image_" + std::to_string(currentTime) + "_" + std::to_string(randomNum) + extension;
-
-	return fileName;
-}
+//std::string Server::generateRandomFileName(const std::string& extension) {
+//	// Obtenir l'heure actuelle
+//	std::time_t currentTime = std::time(NULL);
+//
+//	// Générer un nombre aléatoire
+//	int randomNum = std::rand();
+//
+//	// Créer un nom de fichier basé sur l'heure et le nombre aléatoire
+//	std::string fileName = "image_" + std::to_string(currentTime) + "_" + std::to_string(randomNum) + extension;
+//
+//	return fileName;
+//}
 
 void Server::saveImage(const std::string& imageData, const std::string& directoryPath) {
-	std::string filePath = directoryPath + generateRandomFileName(".jpeg");
+	std::string filePath = directoryPath + "image" + (".jpeg");
 
 	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
 
@@ -280,10 +281,14 @@ void Server::saveImage(const std::string& imageData, const std::string& director
 		return;
 	}
 
+	if (!fileStream.good()) {
+		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
+	}
+
+
 	fileStream.write(imageData.c_str(), imageData.size());
 	fileStream.close();
 }
-
 
 void	Server::newConnection(const int &listen_fd) {
 	struct sockaddr_storage their_addr;
