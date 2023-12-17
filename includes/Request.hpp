@@ -26,6 +26,7 @@ public:
 	const std::string	&getLineRequest() const;
 	const std::string	&getProtocol() const;
 	const std::string	&getUri() const;
+	const std::string	getHeader(const std::string &headertype) const;
 
 	void		displayHeaderTypes() const;
 

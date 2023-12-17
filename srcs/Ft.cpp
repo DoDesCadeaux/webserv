@@ -23,3 +23,11 @@ bool Ft::fileExists(const std::string &filePath) {
 	std::ifstream file(filePath.c_str());
 	return file.good();
 }
+
+bool Ft::endsWith(const std::string& str, const std::string& suffix) {
+	if (str.length() < suffix.length()) {
+		return false;
+	}
+	return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
+}
+

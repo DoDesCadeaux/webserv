@@ -33,30 +33,23 @@ class Server
 		fd_set							_readfds;
 		fd_set							_writefds;
 		int 							_maxfd;
-		// int								_nbclient = 0;
 		std::map<int, Client*>			_clients;
-		//	std::vector<int>				_clients;
-		// container? workers; => List de res de socket()
-		// container? client: => List de res de accept()
 
 	public:
 		Server();
 		~Server();
 		void 	setSocket();
 		void	addFd(int fd);
+		void	addClientFd(int fd);
 		void	removeFd(int fd);
 		void	run();
 		int		sendAll(const int &fd,  const std::string &httpResponse, unsigned int *len);
 		int		recvAll(const int &fd);
 		void	newConnection(const int &fd);
 		void	killConnection(const int &fd);
-		std::string getResourceContent(const int &fd);
-		// void	accept();
-		// kill conmnexion
-		// run server avec le select
-		// revc
-		// send
-		// update fd_set
+		static std::string getResourceContent(const std::string &uri);
+		static std::string	getMimeType(const std::string& uri);
+
 };
 
 #endif

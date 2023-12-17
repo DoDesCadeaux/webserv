@@ -1,18 +1,79 @@
-<html lang="fr">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="utf-8">
-    <title>Titre de la page</title>
+    <title>Serveur Web C++98</title>
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #0a0a23;
+            color: #ffd700;
+            text-shadow: 2px 2px 1px #000000;
+        }
+
+        .container {
+            width: 1024px;
+            height: 576px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background-image: url('espace.jpeg');
+            background-size: 1024px 576px;
+            opacity: 0.7;
+        }
+
+        .header {
+            font-size: 40px;
+            margin-bottom: 20px;
+        }
+
+        .sub-header {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .description {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .team {
+            font-size: 18px;
+            margin-top: 40px;
+        }
+
+        .footer {
+            font-size: 14px;
+            margin-top: 50px;
+            color: #ffd700;
+            text-shadow: 3px 3px 5px #000000;
+        }
+    </style>
 </head>
 <body>
-
-<h1 style="color: red;">
-    Oh yes, oh yes
-
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla semper risus et eleifend blandit. Nullam eu aliquam sapien. Donec at eros nec dui tincidunt consequat id ac dolor. Nam at lectus a ligula mollis iaculis. Nullam consectetur nulla nibh, sit amet cursus mauris efficitur vitae. Nunc ut orci risus. Mauris ut dolor pellentesque, sodales diam eget, convallis risus.
-
-    Praesent commodo iaculis diam quis dapibus. Maecenas sed elit pellentesque, porttitor arcu ut, suscipit magna. Suspendisse lobortis maximus nisl, quis tempor est. Nam mollis erat turpis, eu hendrerit nulla imperdiet sit amet. Integer urna orci, accumsan a maximus faucibus, dictum in ligula. Nulla ac risus sed nisl efficitur aliquet vel elementum velit. Phasellus orci lorem, tristique eu efficitur nec, commodo nec quam.
-
-    OK LES G's
-</h1>
+<div class="container">
+    <div class="header">Bienvenue sur notre Serveur Web C++98</div>
+    <div class="sub-header">Une création interstellaire</div>
+    <div class="description">
+        Découvrez notre serveur web construit entièrement en C++98.<br>
+        Un projet réalisé par une équipe passionnée de programmation.
+    </div>
+    <div class="team">
+        Conçu et développé par :<br>
+        Dorian • Pauline • Tanguy
+    </div>
+    <div class="footer">
+        &copy; 2023 Tous droits réservés
+    </div>
+</div>
 </body>
 </html>
