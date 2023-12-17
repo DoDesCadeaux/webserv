@@ -13,6 +13,7 @@ Request &Request::operator=(const Request &other) {
 		_requesturi = other._requesturi;
 		_requestformat = other._requestformat;
 		_requestheadertypes = other._requestheadertypes;
+		_requestbody = other._requestbody;
 	}
 
 	return *this;
@@ -58,34 +59,47 @@ void Request::setGetRequest() {
 }
 
 void Request::setPostRequest() {
-	std::istringstream	stream(_requestformat);
-	std::string 		line;
+	// Trouver la fin des en-têtes HTTP
+	std::string::size_type headerEnd = _requestformat.find("\r\n\r\n");
 
-	std::getline(stream, line);
-	while (std::getline(stream, line)) {
-		std::istringstream	linestream(line);
-		std::string			key, value;
+	if (headerEnd != std::string::npos) {
+		// Extraire les en-têtes
+		std::string headers = _requestformat.substr(0, headerEnd);
 
-		if (std::getline(linestream, key, ':')) {
-			if (std::getline(linestream, value))
-				if (!value.empty() && value[0] == ' ')
-					value.erase(0, 1);
-			_requestheadertypes[key] = value;
+		std::istringstream stream(headers);
+		std::string line;
+
+		while (std::getline(stream, line) && !line.empty()) {
+			std::istringstream linestream(line);
+			std::string key, value;
+
+			if (std::getline(linestream, key, ':')) {
+				if (std::getline(linestream, value)) {
+					if (!value.empty() && value[0] == ' ') {
+						value.erase(0, 1);
+					}
+					_requestheadertypes[key] = value;
+				}
+			}
 		}
-		if (line == "\r" || line == "\r\n")
-			break;
-	}
 
-	while (std::getline(stream, line)) {
-		_requestbody += line;
+		// Extraire le payload
+		_requestbody = _requestformat.substr(headerEnd + 4); // +4 pour sauter "\r\n\r\n"
 	}
+}
+
+void Request::setPayload(const std::string &payload) {
+	_requestbody = payload;
 }
 
 void Request::setHeader() {
 	if (_requestprotocol == "GET")
 		setGetRequest();
-	else if (_requestprotocol == "POST")
+	else if (_requestprotocol == "POST") {
 		setPostRequest();
+		displayHeaderTypes();
+		std::cout << _requestbody.size() << std::endl;
+	}
 }
 
 void Request::setupRequest() {
@@ -137,6 +151,10 @@ const std::string &Request::getUri() const {
 	return _requesturi;
 }
 
+const std::string &Request::getBodyPayload() const {
+	return _requestbody;
+}
+
 const std::string Request::getHeader(const std::string &headertype) const {
 	std::map<std::string, std::string>::const_iterator it = _requestheadertypes.find(headertype);
 	if (it != _requestheadertypes.end())
@@ -144,4 +162,3 @@ const std::string Request::getHeader(const std::string &headertype) const {
 	else
 		return std::string(" ");
 }
-

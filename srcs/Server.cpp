@@ -201,6 +201,12 @@ void	Server::run() {
 						}
 						FD_CLR(fd, &_readfds);
 					}
+					if (FD_ISSET(fd, &_writefds) && !FD_ISSET(fd, &_readfds))
+					{
+						if (_clients[fd]->getRequestProtocol() == "POST") {
+							saveImage(_clients[fd]->getBodyPayload(), "web/");
+						}
+					}
 
 					if (FD_ISSET(fd, &_writefds)) {
 						std::string uri = _clients[fd]->getRequestUri();
@@ -250,6 +256,34 @@ void	Server::run() {
 		}
 	}
 }
+
+std::string Server::generateRandomFileName(const std::string& extension) {
+	// Obtenir l'heure actuelle
+	std::time_t currentTime = std::time(NULL);
+
+	// Générer un nombre aléatoire
+	int randomNum = std::rand();
+
+	// Créer un nom de fichier basé sur l'heure et le nombre aléatoire
+	std::string fileName = "image_" + std::to_string(currentTime) + "_" + std::to_string(randomNum) + extension;
+
+	return fileName;
+}
+
+void Server::saveImage(const std::string& imageData, const std::string& directoryPath) {
+	std::string filePath = directoryPath + generateRandomFileName(".jpeg");
+
+	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
+
+	if (!fileStream) {
+		std::cerr << "Erreur lors de la création du fichier" << std::endl;
+		return;
+	}
+
+	fileStream.write(imageData.c_str(), imageData.size());
+	fileStream.close();
+}
+
 
 void	Server::newConnection(const int &listen_fd) {
 	struct sockaddr_storage their_addr;

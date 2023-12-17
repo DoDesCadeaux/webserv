@@ -14,7 +14,7 @@ const std::string &Client::getRequestLine() const {
 }
 
 const std::string &Client::getRequestProtocol() const {
-	return _clientrequest.getLineRequest();
+	return _clientrequest.getProtocol();
 }
 
 const std::string &Client::getRequestUri() const {
@@ -23,6 +23,10 @@ const std::string &Client::getRequestUri() const {
 
 const std::string &Client::getRequestFormat() const {
 	return _clientrequest.getFormat();
+}
+
+const std::string &Client::getBodyPayload() const {
+	return _clientrequest.getBodyPayload();
 }
 
 void Client::setClientRequest(const Request &requesttoset) {

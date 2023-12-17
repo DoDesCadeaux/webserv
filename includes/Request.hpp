@@ -27,6 +27,7 @@ public:
 	const std::string	&getLineRequest() const;
 	const std::string	&getProtocol() const;
 	const std::string	&getUri() const;
+	const std::string	&getBodyPayload() const;
 	const std::string	getHeader(const std::string &headertype) const;
 
 	void		displayHeaderTypes() const;
@@ -37,6 +38,7 @@ public:
 	void		setProtocol();
 	void		setLine();
 	void		setHeader();
+	void		setPayload(const std::string &payload);
 
 	void		setGetRequest();
 	void		setPostRequest();

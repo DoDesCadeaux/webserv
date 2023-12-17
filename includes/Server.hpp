@@ -15,8 +15,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <fstream>
+#include <string>
+#include <ctime>
+#include <cstdlib>
 
-# define BUFFER_SIZE 4096 //test values under 4
+# define BUFFER_SIZE 1024 //test values under 4
 # define SERVER_ROOT "web"
 # define GREEN "\e[32m"
 # define NOCOL "\e[39m"
@@ -26,29 +29,31 @@ class Client;
 
 class Server
 {
-	private:
-		std::list<char *>				_ports;
-		std::list<int>					_listfds;
-		fd_set							_allfds;
-		fd_set							_readfds;
-		fd_set							_writefds;
-		int 							_maxfd;
-		std::map<int, Client*>			_clients;
+private:
+	std::list<char *>				_ports;
+	std::list<int>					_listfds;
+	fd_set							_allfds;
+	fd_set							_readfds;
+	fd_set							_writefds;
+	int 							_maxfd;
+	std::map<int, Client*>			_clients;
 
-	public:
-		Server();
-		~Server();
-		void 	setSocket();
-		void	addFd(int fd);
-		void	addClientFd(int fd);
-		void	removeFd(int fd);
-		void	run();
-		int		sendAll(const int &fd,  const std::string &httpResponse, unsigned int *len);
-		int		recvAll(const int &fd);
-		void	newConnection(const int &fd);
-		void	killConnection(const int &fd);
-		static std::string getResourceContent(const std::string &uri);
-		static std::string	getMimeType(const std::string& uri);
+public:
+	Server();
+	~Server();
+	void 	setSocket();
+	void	addFd(int fd);
+	void	addClientFd(int fd);
+	void	removeFd(int fd);
+	void	run();
+	int		sendAll(const int &fd,  const std::string &httpResponse, unsigned int *len);
+	int		recvAll(const int &fd);
+	void	newConnection(const int &fd);
+	void	killConnection(const int &fd);
+	void	saveImage(const std::string& imageData, const std::string& filePath);
+	static	std::string	generateRandomFileName(const std::string& extension);
+	static	std::string getResourceContent(const std::string &uri);
+	static	std::string	getMimeType(const std::string& uri);
 
 };
 
