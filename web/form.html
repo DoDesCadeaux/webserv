@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Serveur Web C++98</title>
+    <title>Envoi d'Image - Serveur Web C++98</title>
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <meta charset="UTF-8">
     <style>
@@ -31,24 +31,31 @@
             opacity: 0.7;
         }
 
-        .header {
-            font-size: 40px;
-            margin-bottom: 20px;
+        form {
+            margin: 20px;
+            padding: 20px;
+            background: rgba(10, 10, 35, 0.9);
+            border-radius: 8px;
         }
 
-        .sub-header {
-            font-size: 24px;
-            margin-bottom: 30px;
+        input[type="file"] {
+            color: #ffd700;
         }
 
-        .description {
-            font-size: 18px;
-            margin-bottom: 20px;
+        input[type="submit"] {
+            background-color: #ffd700;
+            color: #0a0a23;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-top: 10px;
         }
 
-        .team {
-            font-size: 18px;
-            margin-top: 40px;
+        input[type="submit"]:hover {
+            background-color: #e6c300;
         }
 
         .footer {
@@ -61,20 +68,15 @@
 </head>
 <body>
 <div class="container">
-    <div class="header">Bienvenue sur notre Serveur Web C++98</div>
-    <div class="sub-header">Une création interstellaire</div>
-    <div class="description">
-        Découvrez notre serveur web construit entièrement en C++98.<br>
-        Un projet réalisé par une équipe passionnée de programmation.
-    </div>
-    <div class="team">
-        Conçu et développé par :<br>
-        Dorian • Pauline • Tanguy
-    </div>
-    <div class="team">
-        Envoyer une Image :
-        <a href="http://localhost:8081/form">Envoyer un fichier</a>
-    </div>
+    <div class="header">Envoi d'Image sur Serveur Web C++98</div>
+    <div class="sub-header">Partagez vos images interstellaires</div>
+    <form action="http://localhost:8081/" method="post" enctype="multipart/form-data">
+        <div class="description">
+            Sélectionnez une image à envoyer :
+        </div>
+        <input type="file" name="fichierImage" id="fichierImage" required>
+        <input type="submit" value="Envoyer l'image" name="submit">
+    </form>
     <div class="footer">
         &copy; 2023 Tous droits réservés
     </div>
