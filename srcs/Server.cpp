@@ -7,7 +7,7 @@ Server::Server()
 
 Server::~Server() {}
 
-void Server::setSocket()
+void	Server::setSocket()
 {
 	struct addrinfo hint, *servinfo;
 	int server_fd;
@@ -76,21 +76,20 @@ void Server::setSocket()
 	// free le memset
 }
 
-void Server::addClientFd(int fd) {
+void	Server::addClientFd(int fd) {
 	FD_SET(fd, &_allfds);
 	if (fd > _maxfd)
 		_maxfd = fd;
 }
 
-
-void Server::addFd(int fd) {
+void	Server::addFd(int fd) {
 	FD_SET(fd, &_allfds);
 	_listfds.push_back(fd);
 	_listfds.sort();
 	_maxfd = _listfds.back();
 }
 
-void Server::removeFd(int fd) {
+void	Server::removeFd(int fd) {
 	FD_CLR(fd, &_allfds);
 	for (std::list<int>::iterator it = _listfds.begin(); it != _listfds.end(); ++it) {
 		if (*it == fd)
@@ -103,11 +102,7 @@ void Server::removeFd(int fd) {
 		_maxfd = _listfds.back();
 }
 
-// Lis une requête entrante sur le socket
-// Continuer à appeler recv() jusqu'à ce que tout le contenu soit lu ou qu'il y ait une erreur/fermeture de la connexion
-// Analyse ensuite la requête reçue
-// Retourne la valeur de l'erreur ou le nombre d'octets lus lors du dernier recv()
-int Server::recvAll(const int &fd)
+int		Server::recvAll(const int &fd)
 {
 	ssize_t bytesRead = BUFFER_SIZE - 1;
 	char tmp[BUFFER_SIZE];
@@ -141,7 +136,7 @@ int Server::recvAll(const int &fd)
 	return (bytesRead);
 }
 
-int Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int *len)
+int		Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int *len)
 {
 	unsigned int total = 0;
 	int bytesleft = *len;
@@ -174,7 +169,7 @@ int Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int
 	return (n == -1 ? -1 : 0);
 }
 
-void Server::run() {
+void	Server::run() {
 	int res;
 
 	while (true) {
@@ -210,19 +205,17 @@ void Server::run() {
 					if (FD_ISSET(fd, &_writefds)) {
 						std::string uri = _clients[fd]->getRequestUri();
 						std::string content = getResourceContent(uri);
-
-						std::cout << GREEN << uri << NOCOL << std::endl;
-
 						std::string httpResponse;
-						if (content.empty()) {
-							// Générer une réponse d'erreur 404
+
+						if (content.empty())
 							httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
-						} else {
+						else {
 							std::string mimeType = getMimeType(uri);
 							httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
 						}
 
 						unsigned int len = httpResponse.length();
+
 						if (sendAll(fd, httpResponse, &len) == -1) {
 							perror("sendall");
 							printf("We only sent %d bytes because of the error!\n", len);
@@ -258,7 +251,7 @@ void Server::run() {
 	}
 }
 
-void Server::newConnection(const int &listen_fd) {
+void	Server::newConnection(const int &listen_fd) {
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size = sizeof their_addr;
 
@@ -275,7 +268,7 @@ void Server::newConnection(const int &listen_fd) {
 	std::cout << GREEN << "New client : " << newfd << NOCOL << std::endl;
 }
 
-void Server::killConnection(const int &fd)
+void	Server::killConnection(const int &fd)
 {
 	std::map<int, Client *>::iterator it = _clients.find(fd);
 
@@ -312,11 +305,12 @@ std::string Server::getResourceContent(const std::string &uri) {
 }
 
 std::string Server::getMimeType(const std::string& uri) {
-	if (Ft::endsWith(uri, ".html")) {
+	if (Ft::endsWith(uri, ".html"))
 		return "text/html";
-	} else if (Ft::endsWith(uri, ".ico")) {
+	else if (Ft::endsWith(uri, ".ico"))
 		return "image/x-icon";
-	}
+	else if (Ft::endsWith(uri, ".jpeg"))
+		return "image/jpeg";
 	// Ajoutez d'autres types MIME au besoin
 	return "text/html";
 }

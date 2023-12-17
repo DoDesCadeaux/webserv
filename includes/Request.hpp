@@ -14,6 +14,7 @@ private:
 	std::string								_requestprotocol;
 	std::string 							_requesturi;
 	std::string								_requestformat;
+	std::string								_requestbody;
 
 	std::map<std::string, std::string>		_requestheadertypes;
 
@@ -36,6 +37,9 @@ public:
 	void		setProtocol();
 	void		setLine();
 	void		setHeader();
+
+	void		setGetRequest();
+	void		setPostRequest();
 
 	bool		isValidProtocol();
 	void 		replaceProtocolTo(const std::string &newprotocol);

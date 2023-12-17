@@ -26,4 +26,3 @@ std::string HttpResponse::getErrorResponse(int statuscode, const std::string &st
 						   body;
 	return response;
 }
-

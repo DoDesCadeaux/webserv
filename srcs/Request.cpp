@@ -39,25 +39,53 @@ void Request::setUri() {
 	_requesturi = uritoend.substr(0, spacepos);
 }
 
-void Request::setHeader() {
-	if (_requestprotocol == "GET") {
-		std::istringstream	stream(_requestformat);
-		std::string 		line;
+void Request::setGetRequest() {
+	std::istringstream	stream(_requestformat);
+	std::string 		line;
 
-		std::getline(stream, line);
-		while(std::getline(stream, line) && line != "\r") {
-			std::istringstream	linestream(line);
-			std::string			key, value;
+	std::getline(stream, line);
+	while (std::getline(stream, line) && line != "\r") {
+		std::istringstream	linestream(line);
+		std::string			key, value;
 
-			if (std::getline(linestream, key, ':')) {
-				if (std::getline(linestream, value)) {
-					if (!value.empty() && value[0] == ' ')
-						value.erase(0, 1);
-				}
-				_requestheadertypes[key] = value;
-			}
+		if (std::getline(linestream, key, ':')) {
+			if (std::getline(linestream, value))
+				if (!value.empty() && value[0] == ' ')
+					value.erase(0, 1);
+			_requestheadertypes[key] = value;
 		}
 	}
+}
+
+void Request::setPostRequest() {
+	std::istringstream	stream(_requestformat);
+	std::string 		line;
+
+	std::getline(stream, line);
+	while (std::getline(stream, line)) {
+		std::istringstream	linestream(line);
+		std::string			key, value;
+
+		if (std::getline(linestream, key, ':')) {
+			if (std::getline(linestream, value))
+				if (!value.empty() && value[0] == ' ')
+					value.erase(0, 1);
+			_requestheadertypes[key] = value;
+		}
+		if (line == "\r" || line == "\r\n")
+			break;
+	}
+
+	while (std::getline(stream, line)) {
+		_requestbody += line;
+	}
+}
+
+void Request::setHeader() {
+	if (_requestprotocol == "GET")
+		setGetRequest();
+	else if (_requestprotocol == "POST")
+		setPostRequest();
 }
 
 void Request::setupRequest() {
