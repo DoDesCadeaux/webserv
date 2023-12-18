@@ -46,8 +46,8 @@ public:
 	void	addClientFd(int fd);
 	void	removeFd(int fd);
 	void	run();
-	int		sendAll(const int &fd,  const std::string &httpResponse, unsigned int *len);
-	int		recvAll(const int &fd);
+	bool	sendAll(const int &fd);
+	bool	recvAll(const int &fd);
 	void	newConnection(const int &fd);
 	void	killConnection(const int &fd);
 	void	saveImage(const std::string& imageData, const std::string& filePath);
