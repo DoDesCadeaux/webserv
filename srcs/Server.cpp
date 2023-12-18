@@ -7,7 +7,7 @@ Server::Server()
 
 Server::~Server() {}
 
-void	Server::setSocket()
+void Server::setSocket()
 {
 	struct addrinfo hint, *servinfo;
 	int server_fd;
@@ -76,22 +76,26 @@ void	Server::setSocket()
 	// free le memset
 }
 
-void	Server::addClientFd(int fd) {
+void Server::addClientFd(int fd)
+{
 	FD_SET(fd, &_allfds);
 	if (fd > _maxfd)
 		_maxfd = fd;
 }
 
-void	Server::addFd(int fd) {
+void Server::addFd(int fd)
+{
 	FD_SET(fd, &_allfds);
 	_listfds.push_back(fd);
 	_listfds.sort();
 	_maxfd = _listfds.back();
 }
 
-void	Server::removeFd(int fd) {
+void Server::removeFd(int fd)
+{
 	FD_CLR(fd, &_allfds);
-	for (std::list<int>::iterator it = _listfds.begin(); it != _listfds.end(); ++it) {
+	for (std::list<int>::iterator it = _listfds.begin(); it != _listfds.end(); ++it)
+	{
 		if (*it == fd)
 		{
 			_listfds.erase(it);
@@ -102,34 +106,45 @@ void	Server::removeFd(int fd) {
 		_maxfd = _listfds.back();
 }
 
-int Server::recvAll(const int &fd) {
+int Server::recvAll(const int &fd)
+{
 	std::vector<char> buffer;
 	ssize_t bytesRead;
 	char tmp[BUFFER_SIZE];
 
-	while (true) {
+	while (true)
+	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
-		if (bytesRead > 0) {
+		if (bytesRead > 0)
+		{
 			buffer.insert(buffer.end(), tmp, tmp + bytesRead);
-		} else if (bytesRead == 0) {
+		}
+		else if (bytesRead == 0)
+		{
 			// La connexion a été fermée
 			break;
-		} else {
+		}
+		else
+		{
 			// Erreur ou non-disponibilité des données
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				std::cerr << "Erreur recv: " << std::strerror(errno) << std::endl;
-				return -1;
+			std::cerr << "Erreur recv: " << std::strerror(errno) << std::endl;
+			return -1;
 			}
 			break;
 		}
 	}
 
-	if (!buffer.empty()) {
+	if (!buffer.empty())
+	{
 		Request request(std::string(buffer.begin(), buffer.end()));
 		_clients[fd]->setClientRequest(request);
-		if (request.getHeader("Connection") == "keep-alive") {
+		if (request.getHeader("Connection") == "keep-alive")
+		{
 			_clients[fd]->setKeepAlive(true);
-		} else {
+		}
+		else
+		{
 			_clients[fd]->setKeepAlive(false);
 		}
 	}
@@ -137,7 +152,7 @@ int Server::recvAll(const int &fd) {
 	return buffer.size();
 }
 
-int		Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int *len)
+int Server::sendAll(const int &fd, const std::string &httpResponse, unsigned int *len)
 {
 	unsigned int total = 0;
 	int bytesleft = *len;
@@ -170,10 +185,12 @@ int		Server::sendAll(const int &fd, const std::string &httpResponse, unsigned in
 	return (n == -1 ? -1 : 0);
 }
 
-void	Server::run() {
+void Server::run()
+{
 	int res;
 
-	while (true) {
+	while (true)
+	{
 		struct timeval timeout;
 
 		timeout.tv_sec = 3;
@@ -182,79 +199,97 @@ void	Server::run() {
 		_writefds = _allfds;
 
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
-		if (res == -1) {
+		if (res == -1)
+		{
 			std::cout << "error" << std::endl;
-		} else {
+		}
+		else
+		{
 			std::vector<int> fdsToRemove;
 
-			for (int fd = 0; fd <= _maxfd; ++fd) {
-				if (std::find(_listfds.begin(), _listfds.end(), fd) != _listfds.end() && FD_ISSET(fd, &_readfds)) {
+			for (int fd = 0; fd <= _maxfd; ++fd)
+			{
+				if (FD_ISSET(fd, &_readfds))
+				{
 					usleep(500);
 					newConnection(fd);
 				}
-				else if (_clients.find(fd) != _clients.end()) {
-					if (FD_ISSET(fd, &_readfds)) {
-						if (recvAll(fd) == -1) {
+				if (_clients.find(fd) != _clients.end())
+				{
+					if (FD_ISSET(fd, &_readfds))
+					{
+						if (recvAll(fd) == -1)
+						{
 							perror("recvAll()");
 							std::cout << "echec avec le fd :" << fd << std::endl;
 							fdsToRemove.push_back(fd);
 							continue;
 						}
-						FD_CLR(fd, &_readfds);
+						// FD_CLR(fd, &_readfds);
 					}
 
-					if (FD_ISSET(fd, &_writefds) && !FD_ISSET(fd, &_readfds))
+					// Check de si on doit kill la co
+
+					if (FD_ISSET(fd, &_writefds))
 					{
-						if (_clients[fd]->getRequestProtocol() == "POST") {
-							saveImage(_clients[fd]->getBodyPayload(), "web/");
+						if (!FD_ISSET(fd, &_readfds))
+						{
+							if (_clients[fd]->getRequestProtocol() == "POST")
+							{
+								saveImage(_clients[fd]->getBodyPayload(), "web/");
+							}
 						}
-					}
-
-					if (FD_ISSET(fd, &_writefds)) {
-						std::string uri = _clients[fd]->getRequestUri();
-						std::string content = getResourceContent(uri);
-						std::string httpResponse;
-
-						if (content.empty())
-							httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
-						else {
-							std::string mimeType = getMimeType(uri);
-							httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
-						}
-
-						unsigned int len = httpResponse.length();
-
-						if (sendAll(fd, httpResponse, &len) == -1) {
-							perror("sendall");
-							printf("We only sent %d bytes because of the error!\n", len);
-							fdsToRemove.push_back(fd);
-							continue;
-						}
-
-						if (!_clients[fd]->isKeepAlive())
-							fdsToRemove.push_back(fd);
 						else
-							_clients[fd]->resetKeepAliveTimer();
+						{
+							std::string uri = _clients[fd]->getRequestUri();
+							std::string content = getResourceContent(uri);
+							std::string httpResponse;
+
+							if (content.empty())
+								httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
+							else
+							{
+								std::string mimeType = getMimeType(uri);
+								httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
+							}
+
+							unsigned int len = httpResponse.length();
+
+							if (sendAll(fd, httpResponse, &len) == -1)
+							{
+								perror("sendall");
+								printf("We only sent %d bytes because of the error!\n", len);
+								fdsToRemove.push_back(fd);
+								continue;
+							}
+
+							if (!_clients[fd]->isKeepAlive())
+								fdsToRemove.push_back(fd);
+							else
+								_clients[fd]->resetKeepAliveTimer();
+						}
 					}
 				}
 			}
 
 			// Gestion des timeouts pour les connexions keep-alive
-			for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT)) {
+			for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT))
+				{
 					fdsToRemove.push_back(it->first);
-			}
+				}
 
 			// Supprimez les clients marqués pour suppression
-			for (size_t i = 0; i < fdsToRemove.size(); ++i) {
+			for (size_t i = 0; i < fdsToRemove.size(); ++i)
+			{
 				killConnection(fdsToRemove[i]);
-				_clients.erase(fdsToRemove[i]);
+				// _clients.erase(fdsToRemove[i]);
 			}
 		}
 	}
 }
 
-//std::string Server::generateRandomFileName(const std::string& extension) {
+// std::string Server::generateRandomFileName(const std::string& extension) {
 //	// Obtenir l'heure actuelle
 //	std::time_t currentTime = std::time(NULL);
 //
@@ -265,73 +300,93 @@ void	Server::run() {
 //	std::string fileName = "image_" + std::to_string(currentTime) + "_" + std::to_string(randomNum) + extension;
 //
 //	return fileName;
-//}
+// }
 
-void Server::saveImage(const std::string& imageData, const std::string& directoryPath) {
+void Server::saveImage(const std::string &imageData, const std::string &directoryPath)
+{
 	std::string filePath = directoryPath + "image" + (".jpeg");
 
 	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
 
-	if (!fileStream) {
+	if (!fileStream)
+	{
 		std::cerr << "Erreur lors de la création du fichier" << std::endl;
 		return;
 	}
 
-	if (!fileStream.good()) {
+	if (!fileStream.good())
+	{
 		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
 	}
-
 
 	fileStream.write(imageData.c_str(), imageData.size());
 	fileStream.close();
 }
 
-void	Server::newConnection(const int &listen_fd) {
+void Server::newConnection(const int &listen_fd)
+{
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size = sizeof their_addr;
 
+	// Quid de la vérification de l'adresse aussi
+	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (listen_fd == it->second->getFdPort())
+			return;
+	}
+
 	int newfd = accept(listen_fd, (struct sockaddr *)&their_addr, &addr_size);
-	if (newfd == -1) {
+	if (newfd == -1)
+	{
 		perror("accept");
 		return;
 	}
 
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
-	addClientFd(newfd);
+	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, listen_fd);
 
 	std::cout << GREEN << "New client : " << newfd << NOCOL << std::endl;
+	FD_CLR(listen_fd, &_readfds);
 }
 
-void	Server::killConnection(const int &fd)
+void Server::killConnection(const int &fd)
 {
 	std::map<int, Client *>::iterator it = _clients.find(fd);
 
 	if (it != _clients.end())
 	{
-		delete it->second; // Supprimer l'objet pointé, si nécessaire
-		_clients.erase(fd);  // Supprimer l'entrée de la map
+		delete it->second;	// Supprimer l'objet pointé, si nécessaire
+		_clients.erase(fd); // Supprimer l'entrée de la map
 	}
 	std::cout << RED << "Client disconnected : " << fd << NOCOL << std::endl;
 	close(fd);
 	removeFd(fd);
 }
 
-std::string Server::getResourceContent(const std::string &uri) {
+std::string Server::getResourceContent(const std::string &uri)
+{
 	std::string fullpath = SERVER_ROOT;
 
-	if (uri == "/" || uri == "/index") {
+	if (uri == "/" || uri == "/index")
+	{
 		fullpath += "/index.html";
-	} else if (uri == "/favicon.ico") {
+	}
+	else if (uri == "/favicon.ico")
+	{
 		fullpath += "/favicon.ico";
-	} else {
+	}
+	else
+	{
 		fullpath += uri;
-		if (uri.find('.') == std::string::npos) {
+		if (uri.find('.') == std::string::npos)
+		{
 			fullpath += ".html";
 		}
 	}
 
-	if (Ft::fileExists(fullpath)) {
+	if (Ft::fileExists(fullpath))
+	{
 		std::ifstream file(fullpath.c_str(), std::ios::binary);
 		return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	}
@@ -339,7 +394,8 @@ std::string Server::getResourceContent(const std::string &uri) {
 	return "";
 }
 
-std::string Server::getMimeType(const std::string& uri) {
+std::string Server::getMimeType(const std::string &uri)
+{
 	if (Ft::endsWith(uri, ".html"))
 		return "text/html";
 	else if (Ft::endsWith(uri, ".ico"))
