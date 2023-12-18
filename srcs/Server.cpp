@@ -197,11 +197,12 @@ void	Server::run() {
 						if (recvAll(fd) == -1) {
 							perror("recvAll()");
 							std::cout << "echec avec le fd :" << fd << std::endl;
-							fdsToRemove.push_back(fd); // Marquez pour suppression
+							fdsToRemove.push_back(fd);
 							continue;
 						}
 						FD_CLR(fd, &_readfds);
 					}
+
 					if (FD_ISSET(fd, &_writefds) && !FD_ISSET(fd, &_readfds))
 					{
 						if (_clients[fd]->getRequestProtocol() == "POST") {
@@ -238,21 +239,16 @@ void	Server::run() {
 				}
 			}
 
+			// Gestion des timeouts pour les connexions keep-alive
+			for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT)) {
+					fdsToRemove.push_back(it->first);
+			}
+
 			// Supprimez les clients marqués pour suppression
 			for (size_t i = 0; i < fdsToRemove.size(); ++i) {
 				killConnection(fdsToRemove[i]);
 				_clients.erase(fdsToRemove[i]);
-				FD_CLR(fdsToRemove[i], &_allfds);
-			}
-
-			// Gestion des timeouts pour les connexions keep-alive
-			for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end();) {
-				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT)) {
-					killConnection(it->first);
-					_clients.erase(it++); // Supprimez le client et avancez l'itérateur de manière sûre
-				} else {
-					++it;
-				}
 			}
 		}
 	}
