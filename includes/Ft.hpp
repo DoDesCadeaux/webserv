@@ -2,12 +2,15 @@
 # define FT_HPP
 
 #include <iostream>
-#include "../includes/Server.hpp"
+#include "Server.hpp"
+#include "Client.hpp"
 #include <map>
 
 #define ERR_CONF_EXTRA_BR "Error config file: extra bracket line @."
 #define ERR_CONF_MISSING_BR "Error config file: missing closing bracket to match this '{' in the line @."
 #define ERR_CONF_MISSING_PONCT "Error config file: missing ponctuation line @."
+class Server;
+class Client;
 
 class Ft{
 	public:
@@ -17,6 +20,7 @@ class Ft{
 		static void printClient(const std::map<int, Client *> &clients);
 		static bool fileExists(const std::string& filePath);
 		static bool endsWith(const std::string& str, const std::string& suffix);
+		static void printLogs(Server &serv, Client &client, std::string type);
 };
 
 //QUID de la valeur de retour d'erreur

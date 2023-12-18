@@ -6,6 +6,7 @@ Server::Server()
 	FD_ZERO(&_readfds);
 	FD_ZERO(&_writefds);
 	_listfds.clear();
+	_name = "localhost";
 }
 
 Server::~Server() {}
@@ -16,12 +17,13 @@ void Server::setSocket()
 	int server_fd;
 	int yes = 1;
 
-	char port1[] = "1918";
-	char port2[] = "8081";
-	_ports.push_back(port1);
-	_ports.push_back(port2);
+	std::string port1 = "1918";
+	std::string port2 = "8081";
+	_ports.insert(std::make_pair(port1, 0));
+	_ports.insert(std::make_pair(port2, 0));
 
-	for (std::list<char *>::iterator it = _ports.begin(); it != _ports.end(); it++)
+
+	for (std::map<std::string, int>::iterator it = _ports.begin(); it != _ports.end(); it++)
 	{
 		// On s'assure que la structure est entierement vide
 		memset(&hint, 0, sizeof(hint)); // Pas oublier de free quand un truc fail après
@@ -31,7 +33,7 @@ void Server::setSocket()
 		hint.ai_flags = AI_PASSIVE;		// Assigner localhost au socket
 
 		// Set up les infos du server correctement grace aux params de la struc tampon (hint)
-		if (getaddrinfo(NULL, *it, &hint, &servinfo) != 0)
+		if (getaddrinfo(NULL, it->first.c_str(), &hint, &servinfo) != 0)
 		{
 			perror("Address Info");
 			exit(EXIT_FAILURE);
@@ -44,6 +46,8 @@ void Server::setSocket()
 			perror("Socket");
 			exit(EXIT_FAILURE);
 		}
+		it->second = server_fd;
+	
 
 		// Set up socket en non-bloquant
 		fcntl(server_fd, F_SETFL, O_NONBLOCK);
@@ -58,7 +62,6 @@ void Server::setSocket()
 		// Attribution du socket au port
 		if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0)
 		{
-			std::cout << *it << ": is used port" << std::endl;
 			perror("Bind");
 			exit(EXIT_FAILURE);
 		}
@@ -72,6 +75,7 @@ void Server::setSocket()
 		freeaddrinfo(servinfo);
 		addFd(server_fd);
 	}
+
 }
 
 void Server::addFd(int fd)
@@ -116,6 +120,7 @@ bool Server::recvAll(const int &fd)
 	{
 		Request request(std::string(buffer.begin(), buffer.end()));
 		_clients[fd]->setClientRequest(request);
+		Ft::printLogs(*this, *_clients[fd], REQUEST);
 		if (request.getHeader("Connection") == "keep-alive")
 			_clients[fd]->setKeepAlive(true);
 		else
@@ -206,7 +211,7 @@ void Server::run()
 					}
 					if (FD_ISSET(fd, &_writefds))
 					{
-						if (!FD_ISSET(fd, &_readfds))
+						if (FD_ISSET(fd, &_readfds))
 						{
 							if (_clients[fd]->getRequestProtocol() == "POST")
 								saveImage(_clients[fd]->getBodyPayload(), "web/");
@@ -294,7 +299,8 @@ void Server::newConnection(const int &listen_fd)
 	addFd(newfd);
 	_clients[newfd] = new Client(newfd, their_addr, true, listen_fd);
 
-	std::cout << GREEN << "New client : " << newfd << NOCOL << std::endl;
+	Ft::printLogs(*this, *_clients[newfd], CONNEXION);
+	// std::cout << GREEN << "New client : " << newfd << NOCOL << std::endl;
 	FD_CLR(listen_fd, &_readfds);
 }
 
@@ -304,10 +310,11 @@ void Server::killConnection(const int &fd)
 
 	if (it != _clients.end())
 	{
+		Ft::printLogs(*this, *it->second, DISCONNECT);
 		delete it->second;	// Supprimer l'objet pointé, si nécessaire
 		_clients.erase(fd); // Supprimer l'entrée de la map
 	}
-	std::cout << RED << "Client disconnected : " << fd << NOCOL << std::endl;
+
 	close(fd);
 	removeFd(fd);
 }
@@ -352,4 +359,12 @@ std::string Server::getMimeType(const std::string &uri)
 		return "image/jpeg";
 	// Ajoutez d'autres types MIME au besoin
 	return "text/html";
+}
+
+std::string &Server::getServerName(){
+	return _name;
+}
+
+std::map<std::string, int> &Server::getPorts(){
+	return _ports;
 }

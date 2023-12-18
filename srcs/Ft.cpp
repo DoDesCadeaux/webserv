@@ -31,3 +31,21 @@ bool Ft::endsWith(const std::string& str, const std::string& suffix) {
 	return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
 }
 
+void Ft::printLogs(Server &serv, Client &client, std::string type){
+	std::string port;
+	for (std::map<std::string, int>::iterator it = serv.getPorts().begin(); it != serv.getPorts().end(); it++){
+		if (it->second == client.getFdPort()){
+			port = it->first;
+		}
+	}
+	std::cout << "[" << serv.getServerName() << ":" << port << ":" << client.getFd() << "] ";
+
+	if (type == CONNEXION)
+		std::cout << GREEN << CONNEXION << NOCOL << std::endl;
+	else if (type == DISCONNECT)
+		std::cout << RED << DISCONNECT << NOCOL << std::endl;
+	else if (type == REQUEST)
+		std::cout << "<< [" << client.getRequestProtocol() << "] target:" << client.getRequestUri() << std::endl;
+
+
+}

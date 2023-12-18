@@ -25,18 +25,23 @@
 # define NOCOL "\e[39m"
 # define RED "\e[91m"
 
+# define CONNEXION "New connexion"
+# define DISCONNECT "Connexion closed"
+# define REQUEST ""
+
 class Client;
 
 class Server
 {
 private:
-	std::list<char *>				_ports;
+	std::map<std::string, int>			_ports;
 	std::list<int>					_listfds;
 	fd_set							_allfds;
 	fd_set							_readfds;
 	fd_set							_writefds;
 	int 							_maxfd;
 	std::map<int, Client*>			_clients;
+	std::string						_name;
 
 public:
 	Server();
@@ -54,6 +59,8 @@ public:
 	static	std::string	generateRandomFileName(const std::string& extension);
 	static	std::string getResourceContent(const std::string &uri);
 	static	std::string	getMimeType(const std::string& uri);
+	std::string &getServerName();
+	std::map<std::string, int> &getPorts();
 
 };
 

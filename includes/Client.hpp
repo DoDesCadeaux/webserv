@@ -16,6 +16,7 @@ private:
 	Request					_clientrequest;
 	bool 					_keepalive;
 	time_t					_lastactivity;
+	// HttpResponse			_clientresponse;
 
 public:
 	Client(int fd, struct sockaddr_storage addr, bool connect, int fdport);
