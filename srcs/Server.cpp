@@ -208,11 +208,8 @@ void Server::run()
 					{
 						if (FD_ISSET(fd, &_readfds))
 						{
-							std::cout << "PROTOCOL : " << _clients[fd]->getRequestProtocol() << std::endl;
-							if (_clients[fd]->getRequestProtocol() == "POST") {
-								std::cout << "PAYLOAD : " << RED <<_clients[fd]->getBodyPayload() << NOCOL << std::endl;
+							if (_clients[fd]->getRequestProtocol() == "POST")
 								saveImage(_clients[fd]->getBodyPayload(), "web/");
-							}
 						}
 						else
 						{

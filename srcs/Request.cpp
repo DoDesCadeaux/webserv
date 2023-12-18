@@ -83,11 +83,6 @@ void Request::setPostRequest() {
 				continue; // Ignorer les lignes vides au début
 			}
 
-			for (size_t i = 0; i < 1; ++i) {
-				int valeurASCII = static_cast<int>(line[i]);
-				std::cout << "Le caractère " << line[i] << " a la valeur ASCII : " << valeurASCII << std::endl;
-			}
-
 			isFirstValidLine = false;
 
 			// Ajouter la ligne au payload traité
