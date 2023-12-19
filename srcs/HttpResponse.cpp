@@ -7,7 +7,6 @@ std::string HttpResponse::getResponse(int statuscode, const std::string &statusm
 
 	if (statuscode == 302) {
 		std::string lastfileName = lastfile.substr(4);
-		std::cout << "LAST FILE NAME :" << lastfileName << std::endl;
 		headers["Location"] = "http://localhost:8081/" + lastfileName;
 	}
 	else {

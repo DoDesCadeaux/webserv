@@ -332,7 +332,6 @@ std::string Server::getMimeType(const std::string &uri) {
 		return "image/jpg";
 	else if (Ft::endsWith(uri, ".gif"))
 		return "image/gif";
-	// Ajoutez d'autres types MIME au besoin
 	return "text/html";
 }
 
@@ -342,15 +341,12 @@ void Server::saveFile(const int &fd, const std::string &fileData, const std::str
 	std::string extension = getExtensionFromMimeType(mimeType);
 	std::string filePath = directoryPath + "postedFile" + extension;
 
-	std::cout << filePath << std::endl;
-
 	_clients[fd]->setLastFilePath(filePath);
 
 	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
 
 	if (!fileStream)
 	{
-		std::cout << errno << std::endl;
 		std::cerr << "Erreur lors de la création du fichier" << std::endl;
 		return;
 	}
@@ -358,9 +354,7 @@ void Server::saveFile(const int &fd, const std::string &fileData, const std::str
 	fileStream.write(fileData.c_str(), fileData.size());
 
 	if (!fileStream.good())
-	{
 		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
-	}
 
 	fileStream.close();
 }
