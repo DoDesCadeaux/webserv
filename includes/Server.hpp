@@ -27,7 +27,8 @@
 
 # define CONNEXION "New connexion"
 # define DISCONNECT "Connexion closed"
-# define REQUEST ""
+# define REQUEST "Request"
+# define RESPONSE "Response"
 
 class Client;
 

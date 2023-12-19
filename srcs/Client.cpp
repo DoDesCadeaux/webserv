@@ -33,6 +33,11 @@ void Client::setClientRequest(const Request &requesttoset) {
 	_clientrequest = requesttoset;
 }
 
+void    Client::setClientResponse(const HttpResponse &response){
+    _clientresponse = response;
+}
+
+
 const int &Client::getFdPort() const {
     return _fdport;
 }
@@ -57,4 +62,16 @@ bool Client::hasKeepAliveTimedOut(int timeoutSeconds) const {
 	time_t now = time(NULL);
 	double elapsed = difftime(now, _lastactivity);
 	return elapsed > timeoutSeconds;
+}
+
+const std::string &Client::getResponse() const{
+	return _clientresponse.getResponse();
+}
+
+const int		&Client::getResponseStatusCode () const{
+	return _clientresponse.getStatusCode();
+}
+
+const std::string &Client::getResponseStatusMsg() const{
+	return _clientresponse.getStatusMessage();
 }

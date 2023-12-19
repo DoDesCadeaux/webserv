@@ -22,7 +22,6 @@ void Server::setSocket()
 	_ports.insert(std::make_pair(port1, 0));
 	_ports.insert(std::make_pair(port2, 0));
 
-
 	for (std::map<std::string, int>::iterator it = _ports.begin(); it != _ports.end(); it++)
 	{
 		// On s'assure que la structure est entierement vide
@@ -47,7 +46,6 @@ void Server::setSocket()
 			exit(EXIT_FAILURE);
 		}
 		it->second = server_fd;
-	
 
 		// Set up socket en non-bloquant
 		fcntl(server_fd, F_SETFL, O_NONBLOCK);
@@ -75,7 +73,6 @@ void Server::setSocket()
 		freeaddrinfo(servinfo);
 		addFd(server_fd);
 	}
-
 }
 
 void Server::addFd(int fd)
@@ -134,17 +131,22 @@ bool Server::sendAll(const int &fd)
 {
 	std::string uri = _clients[fd]->getRequestUri();
 	std::string content = getResourceContent(uri);
-	std::string httpResponse;
+	HttpResponse response;
 
-	if (content.empty())
-		httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
+	if (content.empty()){
+		response.setErrorResponse(404, "Not Found");
+	// httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
+		_clients[fd]->setClientResponse(response);
+	}
 	else
 	{
 		std::string mimeType = getMimeType(uri);
-		httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
+		response.setNormalResponse(200, "OK", content, mimeType);
+		_clients[fd]->setClientResponse(response);
+		// httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
 	}
 
-	unsigned int len = httpResponse.length();
+	unsigned int len = response.getResponse().length();
 	unsigned int total = 0;
 	int bytesleft = len;
 	int n;
@@ -153,7 +155,7 @@ bool Server::sendAll(const int &fd)
 
 	while (total < len)
 	{
-		n = send(fd, httpResponse.c_str() + total, bytesleft, 0);
+		n = send(fd, response.getResponse().c_str() + total, bytesleft, 0);
 		if (n == -1)
 		{
 			usleep(20000);
@@ -168,6 +170,8 @@ bool Server::sendAll(const int &fd)
 	}
 
 	len = total;
+	Ft::printLogs(*this, *_clients[fd], RESPONSE);
+	std::cout << len << std::endl;
 	return (n == -1 ? false : true);
 }
 
@@ -282,11 +286,12 @@ void Server::newConnection(const int &listen_fd)
 {
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size = sizeof their_addr;
-	
+
 	// Quid de la vérification de l'adresse aussi
 	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
-		if (listen_fd == it->first){
+		if (listen_fd == it->first)
+		{
 			return;
 		}
 	}
@@ -361,10 +366,12 @@ std::string Server::getMimeType(const std::string &uri)
 	return "text/html";
 }
 
-std::string &Server::getServerName(){
+std::string &Server::getServerName()
+{
 	return _name;
 }
 
-std::map<std::string, int> &Server::getPorts(){
+std::map<std::string, int> &Server::getPorts()
+{
 	return _ports;
 }

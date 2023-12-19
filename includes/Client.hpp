@@ -16,11 +16,12 @@ private:
 	Request					_clientrequest;
 	bool 					_keepalive;
 	time_t					_lastactivity;
-	// HttpResponse			_clientresponse;
+	HttpResponse			_clientresponse;
 
 public:
 	Client(int fd, struct sockaddr_storage addr, bool connect, int fdport);
-	void	setClientRequest(const Request &requesttoset);
+	void			setClientRequest(const Request &requesttoset);
+	void			setClientResponse(const HttpResponse &response);
 	const int		&getFdPort() const;
 	const int		&getFd() const;
 
@@ -29,6 +30,10 @@ public:
 	const std::string &getRequestUri() const;
 	const std::string &getRequestFormat() const;
 	const std::string &getBodyPayload() const;
+
+	const std::string &getResponse() const;
+	const int		&getResponseStatusCode () const;
+	const std::string &getResponseStatusMsg() const;
 
 	void setKeepAlive(bool ka);
 

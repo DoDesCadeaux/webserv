@@ -46,6 +46,8 @@ void Ft::printLogs(Server &serv, Client &client, std::string type){
 		std::cout << RED << DISCONNECT << NOCOL << std::endl;
 	else if (type == REQUEST)
 		std::cout << "<< [" << client.getRequestProtocol() << "] target:" << client.getRequestUri() << std::endl;
+	else if (type == RESPONSE)
+		std::cout << ">> [Status: " << client.getResponseStatusCode() << " " << client.getResponseStatusMsg() << "] lenght:";
 
 
 }
