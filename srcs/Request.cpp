@@ -63,30 +63,44 @@ void Request::setPostRequest() {
 	std::string::size_type headerEnd = _requestformat.find("\r\n\r\n");
 
 	if (headerEnd != std::string::npos) {
-		// Extraire les en-têtes
-		std::string headers = _requestformat.substr(0, headerEnd);
+		// Garder les en-têtes tels quels
+		_requestbody = _requestformat.substr(headerEnd + 4); // Extraire le payload
 
-		std::istringstream stream(headers);
+		std::istringstream stream(_requestbody);
 		std::string line;
+		std::string processedPayload;
+		bool isFirstValidLine = true;
 
-		while (std::getline(stream, line) && !line.empty()) {
-			std::istringstream linestream(line);
-			std::string key, value;
-
-			if (std::getline(linestream, key, ':')) {
-				if (std::getline(linestream, value)) {
-					if (!value.empty() && value[0] == ' ') {
-						value.erase(0, 1);
-					}
-					_requestheadertypes[key] = value;
-				}
+		while (std::getline(stream, line)) {
+			// Vérifier les occurrences dans le payload
+			if (line.find("----") != std::string::npos ||
+				line.find("Content") != std::string::npos ||
+				line.find("Envoyer") != std::string::npos) {
+				continue; // Ignorer cette ligne
 			}
+			// Vérifier si c'est la première ligne valide
+			if ((isFirstValidLine && line.empty()) || (isFirstValidLine && line == "\r")) {
+				continue; // Ignorer les lignes vides au début
+			}
+
+			isFirstValidLine = false;
+
+			// Ajouter la ligne au payload traité
+			processedPayload += line + "\n";
 		}
 
-		// Extraire le payload
-		_requestbody = _requestformat.substr(headerEnd + 4); // +4 pour sauter "\r\n\r\n"
+		// Supprimer les lignes vides de fin si elles existent
+		std::string::size_type endPos = processedPayload.find_last_not_of("\r\n");
+		if (endPos != std::string::npos) {
+			processedPayload = processedPayload.substr(0, endPos + 1);
+		}
+
+		// Mettre à jour le payload avec les lignes traitées
+		_requestbody = processedPayload;
 	}
 }
+
+
 
 void Request::setPayload(const std::string &payload) {
 	_requestbody = payload;
@@ -98,7 +112,6 @@ void Request::setHeader() {
 	else if (_requestprotocol == "POST") {
 		setPostRequest();
 		displayHeaderTypes();
-		std::cout << _requestbody.size() << std::endl;
 	}
 }
 
