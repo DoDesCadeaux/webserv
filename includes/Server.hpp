@@ -43,17 +43,16 @@ public:
 	~Server();
 	void 	setSocket();
 	void	addFd(int fd);
-	void	addClientFd(int fd);
 	void	removeFd(int fd);
 	void	run();
 	bool	sendAll(const int &fd);
 	bool	recvAll(const int &fd);
 	void	newConnection(const int &fd);
 	void	killConnection(const int &fd);
-	void	saveImage(const std::string& imageData, const std::string& filePath);
-	static	std::string	generateRandomFileName(const std::string& extension);
+	void	saveFile(const int &fd, const std::string &imageData, const std::string &directoryPath, const std::string &mimeType);
 	static	std::string getResourceContent(const std::string &uri);
 	static	std::string	getMimeType(const std::string& uri);
+	static	std::string getExtensionFromMimeType(const std::string &mimeType);
 
 };
 

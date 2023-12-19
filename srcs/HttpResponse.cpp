@@ -1,11 +1,14 @@
 #include "../includes/HttpResponse.hpp"
+#include <iostream>
 
-std::string HttpResponse::getResponse(int statuscode, const std::string &statusmessage, const std::string &bodycontent, const std::string &mimeType) {
+std::string HttpResponse::getResponse(int statuscode, const std::string &statusmessage, const std::string &bodycontent, const std::string &mimeType, const std::string &lastfile) {
 	std::string statusline = "HTTP/1.1 " + std::to_string(statuscode) + " " + statusmessage + "\r\n";
 	std::map<std::string, std::string> headers;
 
 	if (statuscode == 302) {
-		headers["Location"] = "http://localhost:8081/showPost";
+		std::string lastfileName = lastfile.substr(4);
+		std::cout << "LAST FILE NAME :" << lastfileName << std::endl;
+		headers["Location"] = "http://localhost:8081/" + lastfileName;
 	}
 	else {
 		headers["Content-Type"] = mimeType; // Utilisez le type MIME fourni

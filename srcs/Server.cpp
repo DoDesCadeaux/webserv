@@ -129,10 +129,10 @@ bool Server::sendAll(const int &fd)
 {
 	std::string content;
 	std::string uri = _clients[fd]->getRequestUri();
-	if (_clients[fd]->getRequestProtocol() == "GET") {
+	if (_clients[fd]->getRequestProtocol() == "GET")
 		content = getResourceContent(uri);
-	} else if (_clients[fd]->getRequestProtocol() == "POST") {
-		std::ifstream file("web/showPost.html");
+	else if (_clients[fd]->getRequestProtocol() == "POST") {
+		std::ifstream file(_clients[fd]->getLastFilePath());
 		std::string line;
 		if (file.is_open()) {
 			while (getline(file, line)) {
@@ -152,11 +152,11 @@ bool Server::sendAll(const int &fd)
 	{
 		if (_clients[fd]->getRequestProtocol() == "GET") {
 			std::string mimeType = getMimeType(uri);
-			httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
+			httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType, _clients[fd]->getLastFilePath());
 		}
 		else if (_clients[fd]->getRequestProtocol() == "POST") {
 			std::string mimeType = getMimeType(uri);
-			httpResponse = HttpResponse::getResponse(302, "Found", content, mimeType);
+			httpResponse = HttpResponse::getResponse(302, "Found", content, mimeType, _clients[fd]->getLastFilePath());
 		}
 	}
 
@@ -228,9 +228,7 @@ void Server::run()
 						if (FD_ISSET(fd, &_readfds))
 						{
 							if (_clients[fd]->getRequestProtocol() == "POST")
-							{
-								saveImage(_clients[fd]->getBodyPayload(), "web/");
-							}
+								saveFile(fd, _clients[fd]->getBodyPayload(), "web/", _clients[fd]->getHeaderTypeValue("Content-Type"));
 						}
 						else if (FD_ISSET(fd, &_writefds))
 						{
@@ -258,40 +256,6 @@ void Server::run()
 				killConnection(fdsToRemove[i]);
 		}
 	}
-}
-
-// std::string Server::generateRandomFileName(const std::string& extension) {
-//	// Obtenir l'heure actuelle
-//	std::time_t currentTime = std::time(NULL);
-//
-//	// Générer un nombre aléatoire
-//	int randomNum = std::rand();
-//
-//	// Créer un nom de fichier basé sur l'heure et le nombre aléatoire
-//	std::string fileName = "image_" + std::to_string(currentTime) + "_" + std::to_string(randomNum) + extension;
-//
-//	return fileName;
-// }
-
-void Server::saveImage(const std::string &imageData, const std::string &directoryPath)
-{
-	std::string filePath = directoryPath + "image" + (".jpeg");
-
-	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
-
-	if (!fileStream)
-	{
-		std::cerr << "Erreur lors de la création du fichier" << std::endl;
-		return;
-	}
-
-	if (!fileStream.good())
-	{
-		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
-	}
-
-	fileStream.write(imageData.c_str(), imageData.size());
-	fileStream.close();
 }
 
 void Server::newConnection(const int &listen_fd)
@@ -357,8 +321,7 @@ std::string Server::getResourceContent(const std::string &uri)
 	return "";
 }
 
-std::string Server::getMimeType(const std::string &uri)
-{
+std::string Server::getMimeType(const std::string &uri) {
 	if (Ft::endsWith(uri, ".html"))
 		return "text/html";
 	else if (Ft::endsWith(uri, ".ico"))
@@ -369,4 +332,48 @@ std::string Server::getMimeType(const std::string &uri)
 		return "image/jpg";
 	// Ajoutez d'autres types MIME au besoin
 	return "text/html";
+}
+
+
+void Server::saveFile(const int &fd, const std::string &fileData, const std::string &directoryPath, const std::string &mimeType)
+{
+	std::string extension = getExtensionFromMimeType(mimeType);
+	std::string filePath = directoryPath + "postedFile" + extension;
+
+	std::cout << filePath << std::endl;
+
+	_clients[fd]->setLastFilePath(filePath);
+
+	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+
+	if (!fileStream)
+	{
+		std::cout << errno << std::endl;
+		std::cerr << "Erreur lors de la création du fichier" << std::endl;
+		return;
+	}
+
+	fileStream.write(fileData.c_str(), fileData.size());
+
+	if (!fileStream.good())
+	{
+		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
+	}
+
+	fileStream.close();
+}
+
+std::string Server::getExtensionFromMimeType(const std::string &mimeType) {
+	if (mimeType.find("image/jpeg") != std::string::npos)
+		return ".jpeg";
+	else if (mimeType.find("image/png") != std::string::npos)
+		return ".png";
+	else if (mimeType.find("image/gif") != std::string::npos)
+		return ".gif";
+	else if (mimeType.find("text/plain") != std::string::npos)
+		return ".txt";
+	else if (mimeType.find("text/html") != std::string::npos)
+		return ".html";
+	else
+		return ".bin";
 }

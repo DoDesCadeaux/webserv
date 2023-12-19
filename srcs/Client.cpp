@@ -7,6 +7,7 @@ Client::Client(int fd, struct sockaddr_storage addr, bool connect, int fdport) {
     _fdport = fdport;
 	_keepalive = false;
 	_lastactivity = time(NULL);
+	_lastfilepath = "";
 }
 
 const std::string &Client::getRequestLine() const {
@@ -41,12 +42,24 @@ const int &Client::getFd() const {
     return _fd;
 }
 
+std::string Client::getHeaderTypeValue(const std::string &headertype) const {
+	return _clientrequest.getHeader(headertype);
+}
+
+const std::string &Client::getLastFilePath() const {
+	return _lastfilepath;
+}
+
 bool Client::isKeepAlive() const {
 	return _keepalive;
 }
 
 void Client::setKeepAlive(bool ka) {
 	_keepalive = ka;
+}
+
+void Client::setLastFilePath(const std::string &filepath) {
+	_lastfilepath = filepath;
 }
 
 void Client::resetKeepAliveTimer() {

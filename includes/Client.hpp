@@ -16,6 +16,7 @@ private:
 	Request					_clientrequest;
 	bool 					_keepalive;
 	time_t					_lastactivity;
+	std::string 			_lastfilepath;
 
 public:
 	Client(int fd, struct sockaddr_storage addr, bool connect, int fdport);
@@ -28,8 +29,12 @@ public:
 	const std::string &getRequestUri() const;
 	const std::string &getRequestFormat() const;
 	const std::string &getBodyPayload() const;
+	const std::string &getLastFilePath() const;
+	std::string getHeaderTypeValue(const std::string &headertype) const;
 
 	void setKeepAlive(bool ka);
+
+	void setLastFilePath(const std::string &filepath);
 
 	bool isKeepAlive() const;
 

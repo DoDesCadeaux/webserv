@@ -74,9 +74,20 @@ void Request::setPostRequest() {
 		while (std::getline(stream, line)) {
 			// Vérifier les occurrences dans le payload
 			if (line.find("----") != std::string::npos ||
-				line.find("Content") != std::string::npos ||
-				line.find("Send") != std::string::npos)  {
+			line.find("Send") != std::string::npos ||
+			line.find("Content-Disposition") != std::string::npos)
 				continue; // Ignorer cette ligne
+			if (line.find("Content-Type") != std::string::npos) {
+				std::istringstream	linestream(line);
+				std::string			key, value;
+
+				if (std::getline(linestream, key, ':')) {
+					if (std::getline(linestream, value))
+						if (!value.empty() && value[0] == ' ')
+							value.erase(0, 1);
+					_requestheadertypes[key] = value;
+				}
+				continue;
 			}
 			// Vérifier si c'est la première ligne valide
 			if ((isFirstValidLine && line.empty()) || (isFirstValidLine && line == "\r")) {
@@ -109,10 +120,8 @@ void Request::setPayload(const std::string &payload) {
 void Request::setHeader() {
 	if (_requestprotocol == "GET")
 		setGetRequest();
-	else if (_requestprotocol == "POST") {
+	else if (_requestprotocol == "POST")
 		setPostRequest();
-		displayHeaderTypes();
-	}
 }
 
 void Request::setupRequest() {
