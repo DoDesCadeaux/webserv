@@ -169,9 +169,8 @@ bool Server::sendAll(const int &fd)
 		retries = 0; // Réinitialiser le compteur de réessais après un envoi réussi
 	}
 
-	len = total;
 	Ft::printLogs(*this, *_clients[fd], RESPONSE);
-	std::cout << len << std::endl;
+	len = total;
 	return (n == -1 ? false : true);
 }
 

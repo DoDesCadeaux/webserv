@@ -34,6 +34,7 @@ public:
 	const std::string &getResponse() const;
 	const int		&getResponseStatusCode () const;
 	const std::string &getResponseStatusMsg() const;
+	const unsigned long &getResponseLength() const;
 
 	void setKeepAlive(bool ka);
 

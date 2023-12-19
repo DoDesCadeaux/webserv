@@ -7,9 +7,10 @@
 
 class HttpResponse {
 private:
-	int			_statuscode;
-	std::string	_statusmessage;
-	std::string	_response;
+	int						_statuscode;
+	unsigned long			_length;
+	std::string				_statusmessage;
+	std::string				_response;
 
 public:
 	HttpResponse();
@@ -23,6 +24,8 @@ public:
 	const std::string &getResponse() const;
 	const std::string &getStatusMessage() const;
 	const int		&getStatusCode() const;
+
+	const unsigned long		&getLength() const;
 };
 
 #endif

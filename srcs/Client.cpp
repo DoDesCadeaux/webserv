@@ -37,7 +37,6 @@ void    Client::setClientResponse(const HttpResponse &response){
     _clientresponse = response;
 }
 
-
 const int &Client::getFdPort() const {
     return _fdport;
 }
@@ -75,3 +74,8 @@ const int		&Client::getResponseStatusCode () const{
 const std::string &Client::getResponseStatusMsg() const{
 	return _clientresponse.getStatusMessage();
 }
+
+const unsigned long &Client::getResponseLength() const {
+	return _clientresponse.getLength();
+}
+

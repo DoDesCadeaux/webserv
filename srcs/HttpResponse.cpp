@@ -26,6 +26,8 @@ void HttpResponse::setNormalResponse(int statuscode, const std::string &statusme
 	headers["Content-Length"] = std::to_string(bodycontent.size());
 	headers["Connection"] = "close";
 
+	_length = bodycontent.length();
+
 	_response = statusline;
 	for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
 	{
@@ -46,6 +48,7 @@ void HttpResponse::setErrorResponse(int statuscode, const std::string &statusmes
 				"Content-Length: " + std::to_string(body.length()) + "\r\n" +
 				"\r\n" +
 				body;
+	_length = body.length();
 }
 
 const std::string &HttpResponse::getResponse() const
@@ -61,4 +64,8 @@ const std::string &HttpResponse::getStatusMessage() const
 const int &HttpResponse::getStatusCode() const
 {
 	return _statuscode;
+}
+
+const unsigned long &HttpResponse::getLength() const {
+	return _length;
 }
