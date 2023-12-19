@@ -330,6 +330,8 @@ std::string Server::getMimeType(const std::string &uri) {
 		return "image/jpeg";
 	else if (Ft::endsWith(uri, ".jpg"))
 		return "image/jpg";
+	else if (Ft::endsWith(uri, ".gif"))
+		return "image/gif";
 	// Ajoutez d'autres types MIME au besoin
 	return "text/html";
 }
