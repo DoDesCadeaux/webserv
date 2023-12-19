@@ -4,9 +4,14 @@ std::string HttpResponse::getResponse(int statuscode, const std::string &statusm
 	std::string statusline = "HTTP/1.1 " + std::to_string(statuscode) + " " + statusmessage + "\r\n";
 	std::map<std::string, std::string> headers;
 
-	headers["Content-Type"] = mimeType; // Utilisez le type MIME fourni
-	headers["Content-Length"] = std::to_string(bodycontent.size());
-	headers["Connection"] = "close";
+	if (statuscode == 302) {
+		headers["Location"] = "http://localhost:8081/showPost";
+	}
+	else {
+		headers["Content-Type"] = mimeType; // Utilisez le type MIME fourni
+		headers["Content-Length"] = std::to_string(bodycontent.size());
+		headers["Connection"] = "close";
+	}
 
 	std::string response = statusline;
 	for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it) {

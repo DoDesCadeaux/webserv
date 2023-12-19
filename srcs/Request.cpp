@@ -75,7 +75,7 @@ void Request::setPostRequest() {
 			// Vérifier les occurrences dans le payload
 			if (line.find("----") != std::string::npos ||
 				line.find("Content") != std::string::npos ||
-				line.find("Envoyer") != std::string::npos) {
+				line.find("Send") != std::string::npos)  {
 				continue; // Ignorer cette ligne
 			}
 			// Vérifier si c'est la première ligne valide

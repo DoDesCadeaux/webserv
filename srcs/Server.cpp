@@ -127,16 +127,37 @@ bool Server::recvAll(const int &fd)
 
 bool Server::sendAll(const int &fd)
 {
+	std::string content;
 	std::string uri = _clients[fd]->getRequestUri();
-	std::string content = getResourceContent(uri);
+	if (_clients[fd]->getRequestProtocol() == "GET") {
+		content = getResourceContent(uri);
+	} else if (_clients[fd]->getRequestProtocol() == "POST") {
+		std::ifstream file("web/showPost.html");
+		std::string line;
+		if (file.is_open()) {
+			while (getline(file, line)) {
+				content += line + "\r\n";  // Utilisation de \r\n
+			}
+			file.close();
+		}
+		else
+			std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+	}
+
 	std::string httpResponse;
 
 	if (content.empty())
 		httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
 	else
 	{
-		std::string mimeType = getMimeType(uri);
-		httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
+		if (_clients[fd]->getRequestProtocol() == "GET") {
+			std::string mimeType = getMimeType(uri);
+			httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
+		}
+		else if (_clients[fd]->getRequestProtocol() == "POST") {
+			std::string mimeType = getMimeType(uri);
+			httpResponse = HttpResponse::getResponse(302, "Found", content, mimeType);
+		}
 	}
 
 	unsigned int len = httpResponse.length();
@@ -180,9 +201,7 @@ void Server::run()
 
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 		if (res == -1)
-		{
 			std::cout << "error" << std::endl;
-		}
 		else
 		{
 			std::vector<int> fdsToRemove;
@@ -209,9 +228,11 @@ void Server::run()
 						if (FD_ISSET(fd, &_readfds))
 						{
 							if (_clients[fd]->getRequestProtocol() == "POST")
+							{
 								saveImage(_clients[fd]->getBodyPayload(), "web/");
+							}
 						}
-						else
+						else if (FD_ISSET(fd, &_writefds))
 						{
 							if (!sendAll(fd))
 							{
@@ -317,20 +338,14 @@ std::string Server::getResourceContent(const std::string &uri)
 	std::string fullpath = SERVER_ROOT;
 
 	if (uri == "/" || uri == "/index")
-	{
 		fullpath += "/index.html";
-	}
 	else if (uri == "/favicon.ico")
-	{
 		fullpath += "/favicon.ico";
-	}
 	else
 	{
 		fullpath += uri;
 		if (uri.find('.') == std::string::npos)
-		{
 			fullpath += ".html";
-		}
 	}
 
 	if (Ft::fileExists(fullpath))
@@ -350,6 +365,8 @@ std::string Server::getMimeType(const std::string &uri)
 		return "image/x-icon";
 	else if (Ft::endsWith(uri, ".jpeg"))
 		return "image/jpeg";
+	else if (Ft::endsWith(uri, ".jpg"))
+		return "image/jpg";
 	// Ajoutez d'autres types MIME au besoin
 	return "text/html";
 }
