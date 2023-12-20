@@ -24,21 +24,17 @@ void Server::setSocket()
 
 	for (std::map<std::string, int>::iterator it = _ports.begin(); it != _ports.end(); it++)
 	{
-		// On s'assure que la structure est entierement vide
-		memset(&hint, 0, sizeof(hint)); // Pas oublier de free quand un truc fail après
-		// Parametrage de la structure tampon (hint)
-		hint.ai_family = AF_UNSPEC;		// Quelque soit l'ipv
-		hint.ai_socktype = SOCK_STREAM; // precise type socket (streaming)
-		hint.ai_flags = AI_PASSIVE;		// Assigner localhost au socket
+		memset(&hint, 0, sizeof(hint));
+		hint.ai_family = AF_UNSPEC;
+		hint.ai_socktype = SOCK_STREAM;
+		hint.ai_flags = AI_PASSIVE;
 
-		// Set up les infos du server correctement grace aux params de la struc tampon (hint)
 		if (getaddrinfo(NULL, it->first.c_str(), &hint, &servinfo) != 0)
 		{
 			perror("Address Info");
 			exit(EXIT_FAILURE);
 		}
 
-		// Mise en place du socket général
 		server_fd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 		if (server_fd == -1)
 		{
@@ -47,17 +43,14 @@ void Server::setSocket()
 		}
 		it->second = server_fd;
 
-		// Set up socket en non-bloquant
 		fcntl(server_fd, F_SETFL, O_NONBLOCK);
 
-		// En cas de re-run du server protection echec bind : "address already in use"
 		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
 		{
 			perror("Setsockopt");
 			exit(EXIT_FAILURE);
 		}
 
-		// Attribution du socket au port
 		if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0)
 		{
 			perror("Bind");
@@ -69,7 +62,6 @@ void Server::setSocket()
 			perror("Listen");
 			exit(EXIT_FAILURE);
 		}
-		// Free du addrinfo
 		freeaddrinfo(servinfo);
 		addFd(server_fd);
 	}
@@ -129,22 +121,40 @@ bool Server::recvAll(const int &fd)
 
 bool Server::sendAll(const int &fd)
 {
+	std::string content;
 	std::string uri = _clients[fd]->getRequestUri();
-	std::string content = getResourceContent(uri);
 	HttpResponse response;
+
+	if (_clients[fd]->getRequestProtocol() == "GET")
+		content = getResourceContent(uri);
+	else if (_clients[fd]->getRequestProtocol() == "POST") {
+		std::ifstream file(_clients[fd]->getLastFilePath());
+		std::string line;
+		if (file.is_open()) {
+			while (getline(file, line)) {
+				content += line + "\r\n";
+			}
+			file.close();
+		}
+		else
+			std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+	}
 
 	if (content.empty()){
 		response.setErrorResponse(404, "Not Found");
-	// httpResponse = HttpResponse::getErrorResponse(404, "Not Found");
 		_clients[fd]->setClientResponse(response);
 	}
 	else
 	{
 		std::string mimeType = getMimeType(uri);
-		response.setNormalResponse(200, "OK", content, mimeType);
+		if (_clients[fd]->getRequestProtocol() == "GET")
+			response.setNormalResponse(200, "OK", content, mimeType, _clients[fd]->getLastFilePath());
+		else if (_clients[fd]->getRequestProtocol() == "POST")
+			response.setNormalResponse(302, "Found", content, mimeType, _clients[fd]->getLastFilePath());
 		_clients[fd]->setClientResponse(response);
-		// httpResponse = HttpResponse::getResponse(200, "OK", content, mimeType);
 	}
+
+	//Faire la fonction de factorisation sur le HttpResponse reponse -> Faire l'operateur d'assignement (HttpResponse & operator=(const  HttpResponse &other))
 
 	unsigned int len = response.getResponse().length();
 	unsigned int total = 0;
@@ -166,11 +176,10 @@ bool Server::sendAll(const int &fd)
 		}
 		total += n;
 		bytesleft -= n;
-		retries = 0; // Réinitialiser le compteur de réessais après un envoi réussi
+		retries = 0;
 	}
 
 	Ft::printLogs(*this, *_clients[fd], RESPONSE);
-	len = total;
 	return (n == -1 ? false : true);
 }
 
@@ -188,9 +197,7 @@ void Server::run()
 
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 		if (res == -1)
-		{
 			std::cout << "error" << std::endl;
-		}
 		else
 		{
 			std::vector<int> fdsToRemove;
@@ -217,9 +224,9 @@ void Server::run()
 						if (FD_ISSET(fd, &_readfds))
 						{
 							if (_clients[fd]->getRequestProtocol() == "POST")
-								saveImage(_clients[fd]->getBodyPayload(), "web/");
+								saveFile(fd, _clients[fd]->getBodyPayload(), "web/", _clients[fd]->getHeaderTypeValue("Content-Type"));
 						}
-						else
+						else if (FD_ISSET(fd, &_writefds))
 						{
 							if (!sendAll(fd))
 							{
@@ -247,40 +254,6 @@ void Server::run()
 	}
 }
 
-// std::string Server::generateRandomFileName(const std::string& extension) {
-//	// Obtenir l'heure actuelle
-//	std::time_t currentTime = std::time(NULL);
-//
-//	// Générer un nombre aléatoire
-//	int randomNum = std::rand();
-//
-//	// Créer un nom de fichier basé sur l'heure et le nombre aléatoire
-//	std::string fileName = "image_" + std::to_string(currentTime) + "_" + std::to_string(randomNum) + extension;
-//
-//	return fileName;
-// }
-
-void Server::saveImage(const std::string &imageData, const std::string &directoryPath)
-{
-	std::string filePath = directoryPath + "image" + (".jpeg");
-
-	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary);
-
-	if (!fileStream)
-	{
-		std::cerr << "Erreur lors de la création du fichier" << std::endl;
-		return;
-	}
-
-	if (!fileStream.good())
-	{
-		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
-	}
-
-	fileStream.write(imageData.c_str(), imageData.size());
-	fileStream.close();
-}
-
 void Server::newConnection(const int &listen_fd)
 {
 	struct sockaddr_storage their_addr;
@@ -290,9 +263,7 @@ void Server::newConnection(const int &listen_fd)
 	for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (listen_fd == it->first)
-		{
 			return;
-		}
 	}
 
 	int newfd = accept(listen_fd, (struct sockaddr *)&their_addr, &addr_size);
@@ -304,7 +275,6 @@ void Server::newConnection(const int &listen_fd)
 	_clients[newfd] = new Client(newfd, their_addr, true, listen_fd);
 
 	Ft::printLogs(*this, *_clients[newfd], CONNEXION);
-	// std::cout << GREEN << "New client : " << newfd << NOCOL << std::endl;
 	FD_CLR(listen_fd, &_readfds);
 }
 
@@ -315,8 +285,8 @@ void Server::killConnection(const int &fd)
 	if (it != _clients.end())
 	{
 		Ft::printLogs(*this, *it->second, DISCONNECT);
-		delete it->second;	// Supprimer l'objet pointé, si nécessaire
-		_clients.erase(fd); // Supprimer l'entrée de la map
+		delete it->second;
+		_clients.erase(fd);
 	}
 
 	close(fd);
@@ -328,20 +298,14 @@ std::string Server::getResourceContent(const std::string &uri)
 	std::string fullpath = SERVER_ROOT;
 
 	if (uri == "/" || uri == "/index")
-	{
 		fullpath += "/index.html";
-	}
 	else if (uri == "/favicon.ico")
-	{
 		fullpath += "/favicon.ico";
-	}
 	else
 	{
 		fullpath += uri;
 		if (uri.find('.') == std::string::npos)
-		{
 			fullpath += ".html";
-		}
 	}
 
 	if (Ft::fileExists(fullpath))
@@ -353,18 +317,6 @@ std::string Server::getResourceContent(const std::string &uri)
 	return "";
 }
 
-std::string Server::getMimeType(const std::string &uri)
-{
-	if (Ft::endsWith(uri, ".html"))
-		return "text/html";
-	else if (Ft::endsWith(uri, ".ico"))
-		return "image/x-icon";
-	else if (Ft::endsWith(uri, ".jpeg"))
-		return "image/jpeg";
-	// Ajoutez d'autres types MIME au besoin
-	return "text/html";
-}
-
 std::string &Server::getServerName()
 {
 	return _name;
@@ -373,4 +325,56 @@ std::string &Server::getServerName()
 std::map<std::string, int> &Server::getPorts()
 {
 	return _ports;
+}
+
+void Server::saveFile(const int &fd, const std::string &fileData, const std::string &directoryPath, const std::string &mimeType)
+{
+	std::string extension = getExtensionFromMimeType(mimeType);
+	std::string filePath = directoryPath + "postedFile" + extension;
+
+	_clients[fd]->setLastFilePath(filePath);
+
+	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+
+	if (!fileStream)
+	{
+		std::cerr << "Erreur lors de la création du fichier" << std::endl;
+		return;
+	}
+
+	fileStream.write(fileData.c_str(), fileData.size());
+
+	if (!fileStream.good())
+		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
+
+	fileStream.close();
+}
+
+std::string Server::getMimeType(const std::string &uri) {
+	if (Ft::endsWith(uri, ".html"))
+		return "text/html";
+	else if (Ft::endsWith(uri, ".ico"))
+		return "image/x-icon";
+	else if (Ft::endsWith(uri, ".jpeg"))
+		return "image/jpeg";
+	else if (Ft::endsWith(uri, ".jpg"))
+		return "image/jpg";
+	else if (Ft::endsWith(uri, ".gif"))
+		return "image/gif";
+	return "text/html";
+}
+
+std::string Server::getExtensionFromMimeType(const std::string &mimeType) {
+	if (mimeType.find("image/jpeg") != std::string::npos)
+		return ".jpeg";
+	else if (mimeType.find("image/png") != std::string::npos)
+		return ".png";
+	else if (mimeType.find("image/gif") != std::string::npos)
+		return ".gif";
+	else if (mimeType.find("text/plain") != std::string::npos)
+		return ".txt";
+	else if (mimeType.find("text/html") != std::string::npos)
+		return ".html";
+	else
+		return ".bin";
 }

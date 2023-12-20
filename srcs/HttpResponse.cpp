@@ -1,20 +1,10 @@
 #include "../includes/HttpResponse.hpp"
+
 HttpResponse::HttpResponse() {}
+
 HttpResponse::~HttpResponse() {}
 
-// HttpResponse::HttpResponse(int statuscode, const std::string &statusmessage){
-// 	_statuscode = statuscode;
-// 	_statusmessage = statusmessage;
-// 	_response = getErrorResponse();
-// }
-
-// HttpResponse::HttpResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent, const std::string &mimeType){
-// 	_statuscode = statuscode;
-// 	_statusmessage = statusmessage;
-// 	_response = getNormalResponse(bodyContent, mimeType);
-// }
-
-void HttpResponse::setNormalResponse(int statuscode, const std::string &statusmessage, const std::string &bodycontent, const std::string &mimeType)
+void HttpResponse::setNormalResponse(int statuscode, const std::string &statusmessage, const std::string &bodycontent, const std::string &mimeType, const std::string &lastfile)
 {
 	_statuscode = statuscode;
 	_statusmessage = statusmessage;
@@ -22,9 +12,15 @@ void HttpResponse::setNormalResponse(int statuscode, const std::string &statusme
 	std::string statusline = "HTTP/1.1 " + std::to_string(_statuscode) + " " + _statusmessage + "\r\n";
 	std::map<std::string, std::string> headers;
 
-	headers["Content-Type"] = mimeType; // Utilisez le type MIME fourni
-	headers["Content-Length"] = std::to_string(bodycontent.size());
-	headers["Connection"] = "close";
+	if (statuscode == 302) {
+		std::string lastfileName = lastfile.substr(4);
+		headers["Location"] = "http://localhost:8081/" + lastfileName;
+	}
+	else {
+		headers["Content-Type"] = mimeType;
+		headers["Content-Length"] = std::to_string(bodycontent.size());
+		headers["Connection"] = "close";
+	}
 
 	_length = bodycontent.length();
 

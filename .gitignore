@@ -5,3 +5,6 @@ objs
 .idea
 webserv
 .vscode/
+.DS_Store
+*.DS_Store
+web/postedFile*

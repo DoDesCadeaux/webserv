@@ -64,20 +64,31 @@
             color: #ffd700;
             text-shadow: 3px 3px 5px #000000;
         }
+
+        .home {
+            margin-top: 50px;
+            font-size: 25px;
+            color: #ffd700;
+            text-shadow: 3px 3px 5px #000000;
+        }
+
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">Envoi d'Image sur Serveur Web C++98</div>
     <div class="sub-header">Partagez vos images interstellaires</div>
-    <form action="http://localhost:8081/" method="post" enctype="multipart/form-data">
+    <form action="http://localhost:8081/" method="post" enctype="multipart/form-data" target=_blank">
         <div class="description">
-            Sélectionnez une image à envoyer :
+            File to POST :
         </div>
         <input type="file" name="fichierImage" id="fichierImage" required>
-        <input type="submit" value="Envoyer l'image" name="submit">
+        <input type="submit" value="Send" name="submit">
     </form>
+    <a href="/index" class="home">Go back home</a>
+
     <div class="footer">
+        <br>
         &copy; 2023 Tous droits réservés
     </div>
 </div>

@@ -16,9 +16,7 @@ public:
 	HttpResponse();
 	~HttpResponse();
 
-	// HttpResponse(int statuscode, const std::string &statusmessage);
-	// HttpResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent, const std::string &mimeType);
-	void	setNormalResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent, const std::string &mimeType);
+	void	setNormalResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent, const std::string &mimeType, const std::string &lastfile);
 	void	setErrorResponse(int statuscode, const std::string &statusmessage);
 
 	const std::string &getResponse() const;
