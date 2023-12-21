@@ -12,7 +12,6 @@
 
 #include "../includes/Parsor.hpp"
 
-
 // Fonction pour supprimer le ';' d'une chaîne
 std::string removeSemicolon(const std::string &input)
 {
@@ -49,24 +48,24 @@ RemoveSemicolonAdapter removeSemicolon(std::istream &is)
     return RemoveSemicolonAdapter(is);
 }
 
-
-
 /**
  * @brief Permet de trouver le fin de la ligne sans prendre en compte les commentaires
  * @example "workers{      " => return '{'
  * @example "workers; #pour mac" => return ';'
- * 
+ *
  * @param line String ou l'on cherche le dernier char "utilisable"
  * @return Le dernier char "utilisable" de la ligne
  */
 static char findEnd(std::string line)
 {
     size_t stop = line.size();
-    for (size_t i = 0; i < stop; i++){
+    for (size_t i = 0; i < stop; i++)
+    {
         if (line[i] == '#')
             stop = i;
     }
-    for (size_t i = stop - 1; i >= 0; --i){
+    for (size_t i = stop - 1; i >= 0; --i)
+    {
         if (line[i] == ' ' || line[i] == '\t')
             continue;
         return line[i];
@@ -80,8 +79,8 @@ static char findEnd(std::string line)
  *      - Ouverture et fermeture des brackets
  *      - Ponctuation en fin de ligne
  * 		- Commentaires (ligne complete ou en fin de ligne)
- * 
- * @param configName Nom du fichier de configuration 
+ *
+ * @param configName Nom du fichier de configuration
  * @return Un int indiquant si le parsing est ok ou non
  */
 int Parsor::parseIntegrity(std::string configName)
@@ -94,37 +93,40 @@ int Parsor::parseIntegrity(std::string configName)
 
     file.open(configName);
     if (!file.is_open())
-		return Ft::print("Error: failed to open @.", configName, 0);
+        return Ft::print("Error: failed to open @.", configName, 0);
 
-    while (std::getline(file, line)){
+    while (std::getline(file, line))
+    {
         itLine++;
         last = findEnd(line);
 
         if (line.empty() || line[line.find_first_not_of(" \t", 0)] == '#' || last == '\0' || last == 4)
             continue;
-        //Manque fonction check toute la ligne du debut jusqu'au last
-        if (last == '{'){
+        // Manque fonction check toute la ligne du debut jusqu'au last
+        if (last == '{')
+        {
             brackets.push_back(itLine);
             continue;
         }
-        else if (last == '}'){
+        else if (last == '}')
+        {
             if (brackets.empty())
                 return Ft::print(ERR_CONF_EXTRA_BR, itLine, 0);
             brackets.pop_back();
             continue;
         }
-        else if (last != ';'){
+        else if (last != ';')
+        {
             return Ft::print(ERR_CONF_MISSING_PONCT, itLine, 0);
         }
     }
     if (!brackets.empty())
         return Ft::print(ERR_CONF_MISSING_BR, brackets.back(), 0);
- 
+
     file.close();
 
     return 1;
 }
-
 
 bool pathExists(const std::string &path)
 {
@@ -144,7 +146,6 @@ bool isNumeric(const std::string &str)
     return true;
 }
 
-
 static std::string checkNbParam(int nb, std::istringstream &iss)
 {
     std::string additionalValue;
@@ -162,13 +163,10 @@ static std::string checkNbParam(int nb, std::istringstream &iss)
     return removeSemicolon(additionalValue);
 }
 
-
-
 bool startsWith(const std::string &str, const std::string &prefix)
 {
     return str.substr(0, prefix.size()) == prefix;
 }
-
 
 void announceError(std::string location, std::string type)
 {
@@ -240,7 +238,75 @@ bool directiveIsValid(T &toSave, std::istringstream &iss, std::string directive,
     return true;
 }
 
-Server Parsor::parse(std::string fileName)
+void setSocket(Server &server, std::string port)
+{
+    struct addrinfo hint, *servinfo;
+    int server_fd;
+    int yes = 1;
+
+    // std::string port1 = "1918";
+    // std::string port2 = "8081";
+    // _ports.insert(std::make_pair(port1, 0));
+    // _ports.insert(std::make_pair(port2, 0));
+
+    // for (std::map<std::string, int>::iterator it = _ports.begin(); it != _ports.end(); it++)
+    // {
+    // On s'assure que la structure est entierement vide
+    memset(&hint, 0, sizeof(hint)); // Pas oublier de free quand un truc fail après
+    // Parametrage de la structure tampon (hint)
+    hint.ai_family = AF_UNSPEC;     // Quelque soit l'ipv
+    hint.ai_socktype = SOCK_STREAM; // precise type socket (streaming)
+    hint.ai_flags = AI_PASSIVE;     // Assigner localhost au socket
+
+    // Set up les infos du server correctement grace aux params de la struc tampon (hint)
+    if (getaddrinfo(NULL, port.c_str(), &hint, &servinfo) != 0)
+    {
+        perror("Address Info");
+        exit(EXIT_FAILURE);
+    }
+
+    // Mise en place du socket général
+    server_fd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+    if (server_fd == -1)
+    {
+        perror("Socket");
+        exit(EXIT_FAILURE);
+    }
+    // it->second = server_fd;
+
+    // Set up socket en non-bloquant
+    fcntl(server_fd, F_SETFL, O_NONBLOCK);
+
+    // En cas de re-run du server protection echec bind : "address already in use"
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
+    {
+        perror("Setsockopt");
+        exit(EXIT_FAILURE);
+    }
+
+    // Attribution du socket au port
+    if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0)
+    {
+        perror("Bind");
+        std::cout << "with port " << port << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(server_fd, 1000) < 0)
+    {
+        perror("Listen");
+        exit(EXIT_FAILURE);
+    }
+    // Free du addrinfo
+    freeaddrinfo(servinfo);
+
+    server.addFd(server_fd);
+    server.getPorts().insert(std::make_pair(port, server_fd));
+
+    // }
+}
+
+std::vector<Server> Parsor::parse(std::string fileName)
 {
     std::ifstream inputFile(fileName);
 
@@ -265,39 +331,52 @@ Server Parsor::parse(std::string fileName)
             exit(EXIT_FAILURE);
         else if (token == "server_name" && !directiveIsValid(currentServer.getServerName(), iss, token, SERVER, ""))
             exit(EXIT_FAILURE);
-        // else if (token == "listen")
-        // {
-        //     // Récupérer le port d'écoute
-        //     std::string listenPort;
-        //     removeSemicolon(iss) >> listenPort;
-        //     std::string additionalValue = checkNbParam(0, iss);
-        //     if (!additionalValue.empty())
-        //     {
-        //         std::cout << "Server :Error: too many param for listen directive" << std::endl;
-        //         return 1;
-        //     }
-        //     // Vérifier si le port d'écoute existe déjà
-        //     if (currentServer.listenPorts.find(listenPort) != currentServer.listenPorts.end())
-        //     {
-        //         std::cout << "Server :Error: port " << listenPort << " already set" << std::endl;
-        //         return 1;
-        //     }
-        //     if (listenPort.empty())
-        //     {
-        //         std::cout << "Server :Error: missing param for listen directive" << std::endl;
-        //         return 1;
-        //     }
-        //     if (!isNumeric(listenPort))
-        //     {
-        //         std::cout << "Server :Error: port " << listenPort << " is not a valid port" << std::endl;
-        //         return 1;
-        //     }
+        else if (token == "listen")
+        {
+            // Récupérer le port d'écoute
+            std::string listenPort;
+            removeSemicolon(iss) >> listenPort;
+            std::string additionalValue = checkNbParam(0, iss);
+            //->//Check nombre de parametres
+            if (!additionalValue.empty())
+            {
+                std::cout << "Server :Error: too many param for listen directive" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            //->// Vérifier qu'il y a bien un port
+            if (listenPort.empty())
+            {
+                std::cout << "Server :Error: missing param for listen directive" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            //->// Vérifier que c'est bien un nombre
+            if (!isNumeric(listenPort))
+            {
+                std::cout << "Server :Error: port '" << listenPort << "' is not a valid port" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            //->// Vérifier si le port d'écoute existe déjà dans le current Server
+            if (currentServer.getPorts().find(listenPort) != currentServer.getPorts().end())
+            {
+                std::cout << "Server :Error: port " << listenPort << " already set" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
+            {
+                // std::cout << it->getServerName() << std::endl;
+                std::map<std::string, int> servPorts = it->getPorts();
 
-        //     // ICI -> introduire la vérification de port si deja sur ecoute
-
-        //     // Ajouter le port d'écoute au serveur
-        //     currentServer.listenPorts.insert(listenPort);
-        // }
+                for (std::map<std::string, int>::iterator itPort = servPorts.begin(); itPort != servPorts.end(); itPort++)
+                {
+                    if (servPorts.find(listenPort) != servPorts.end())
+                    {
+                        std::cout << "Server : Error: port " << listenPort << " already used by another server" << std::endl;
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+            setSocket(currentServer, listenPort);
+        }
         // else if (token == "error_page")
         // {
         //     // Vérifier si error_page a déjà été initialisé
@@ -377,7 +456,9 @@ Server Parsor::parse(std::string fileName)
             currentServer.getLocations().push_back(currentLocation);
         }
         else if (token == "}")
+        {
             servers.push_back(currentServer);
+        }
     }
 
     // Vérification
@@ -392,7 +473,7 @@ Server Parsor::parse(std::string fileName)
         if (it->getServerName().empty())
             it->setServerName("localhost");
     }
-// std::cout << "==========================================\n";
+    // std::cout << "==========================================\n";
     // // Traitement final
     // for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
     // {
@@ -445,5 +526,5 @@ Server Parsor::parse(std::string fileName)
     //     }
     // }
 
-    return servers[0];
+    return servers;
 }

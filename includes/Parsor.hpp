@@ -32,7 +32,7 @@ class Parsor
 {
 public:
     static int parseIntegrity(std::string configName);
-    static Server parse(std::string configName);
+    static std::vector<Server> parse(std::string configName);
 
 };
 
