@@ -188,8 +188,8 @@ bool alreadySet(T &toSave, std::string directive, std::string type, std::string 
     return true;
 }
 
-template <typename T>
-bool goodArg(T &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
+// template <typename T>
+bool goodArg(std::string &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
 {
     removeSemicolon(iss) >> toSave;
     std::string additionalValue = checkNbParam(0, iss);
@@ -208,8 +208,7 @@ bool goodArg(T &toSave, std::istringstream &iss, std::string directive, std::str
     return true;
 }
 
-template <typename T>
-bool directiveIsValid(T &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
+bool directiveIsValid(std::string &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
 {
     if (directive == "root" || directive == "server_name" || directive == "index" || directive == "autoindex" || directive == "auth" || directive == "upload")
     {
@@ -238,20 +237,12 @@ bool directiveIsValid(T &toSave, std::istringstream &iss, std::string directive,
     return true;
 }
 
-void setSocket(Server &server, std::string port)
+void setSocket(MasterServer &masterServer, Server &server, std::string port)
 {
     struct addrinfo hint, *servinfo;
     int server_fd;
     int yes = 1;
 
-    // std::string port1 = "1918";
-    // std::string port2 = "8081";
-    // _ports.insert(std::make_pair(port1, 0));
-    // _ports.insert(std::make_pair(port2, 0));
-
-    // for (std::map<std::string, int>::iterator it = _ports.begin(); it != _ports.end(); it++)
-    // {
-    // On s'assure que la structure est entierement vide
     memset(&hint, 0, sizeof(hint)); // Pas oublier de free quand un truc fail après
     // Parametrage de la structure tampon (hint)
     hint.ai_family = AF_UNSPEC;     // Quelque soit l'ipv
@@ -272,7 +263,6 @@ void setSocket(Server &server, std::string port)
         perror("Socket");
         exit(EXIT_FAILURE);
     }
-    // it->second = server_fd;
 
     // Set up socket en non-bloquant
     fcntl(server_fd, F_SETFL, O_NONBLOCK);
@@ -300,14 +290,17 @@ void setSocket(Server &server, std::string port)
     // Free du addrinfo
     freeaddrinfo(servinfo);
 
-    server.addFd(server_fd);
+    //////Quid de l'utilité
+    // server.addFd(server_fd);
     server.getPorts().insert(std::make_pair(port, server_fd));
 
-    // }
+    masterServer.addFd(server_fd);
+    masterServer.getPorts().insert(std::make_pair(port, server_fd));
 }
 
-std::vector<Server> Parsor::parse(std::string fileName)
+MasterServer Parsor::parse(std::string fileName)
 {
+    MasterServer masterServer;
     std::ifstream inputFile(fileName);
 
     if (!inputFile.is_open())
@@ -375,7 +368,7 @@ std::vector<Server> Parsor::parse(std::string fileName)
                     }
                 }
             }
-            setSocket(currentServer, listenPort);
+            setSocket(masterServer, currentServer, listenPort);
         }
         // else if (token == "error_page")
         // {
@@ -526,5 +519,8 @@ std::vector<Server> Parsor::parse(std::string fileName)
     //     }
     // }
 
-    return servers;
+
+    masterServer.setServer(servers);
+    
+    return masterServer;
 }

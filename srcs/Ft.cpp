@@ -33,7 +33,7 @@ bool Ft::endsWith(const std::string& str, const std::string& suffix) {
 
 void Ft::printLogs(Server &serv, Client &client, std::string type){
 	std::string port;
-	for (std::map<std::string, int>::iterator it = serv.getPorts().begin(); it != serv.getPorts().end(); it++){
+	for (std::map<std::string, int>::const_iterator it = serv.getPorts().begin(); it != serv.getPorts().end(); it++){
 		if (it->second == client.getFdPort()){
 			port = it->first;
 		}
