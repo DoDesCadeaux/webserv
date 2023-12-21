@@ -20,7 +20,9 @@
 
 class Parsor{
 public:
+    static int parseIntegrity(std::string configName);
     static int parse(std::string configName);
+
 };
 
 #endif

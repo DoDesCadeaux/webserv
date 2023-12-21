@@ -45,7 +45,7 @@ static char findEnd(std::string line)
  * @param configName Nom du fichier de configuration 
  * @return Un int indiquant si le parsing est ok ou non
  */
-int Parsor::parse(std::string configName)
+int Parsor::parseIntegrity(std::string configName)
 {
     std::string line;
     std::ifstream file;
@@ -84,4 +84,35 @@ int Parsor::parse(std::string configName)
     file.close();
 
     return 1;
+}
+
+int Parsor::parse(std::string configName){
+    std::string line;
+    std::ifstream file;
+
+
+    return 1;
+}
+
+static std::vector<std::string> getVecorLine(std::string line){
+        // Utilisation d'un itérateur pour parcourir les caractères
+        std::string::iterator begin = line.begin();
+        std::string::iterator end = line.end();
+
+        // Récupération du dernier caractère
+        char lastChar = *(end--);
+
+        // Vérification si le dernier caractère est '{', '}', ou ';'
+        if (lastChar == '{' || lastChar == '}' || lastChar == ';')
+            if (begin != end)
+                --end;
+
+        // Utilisation d'un flux d'entrée pour extraire les mots
+        std::istringstream iss(std::string(begin, end));
+        std::vector<std::string> words;
+
+        // Copie des mots dans un vecteur
+        std::string word;
+        while (iss >> word)
+            words.push_back(word);
 }
