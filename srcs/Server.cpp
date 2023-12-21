@@ -6,7 +6,23 @@ Server::Server()
 	FD_ZERO(&_readfds);
 	FD_ZERO(&_writefds);
 	_listfds.clear();
-	_name = "localhost";
+	// _name = "localhost";
+}
+
+Server	&Server::operator=(const Server &other)
+{
+	_ports = other._ports;
+	_name = other._name;
+	_root = other._root;
+    _errorPage = other._errorPage;
+	_locations = other._locations;
+	_listfds = other._listfds;
+	_allfds = other._allfds;
+	_readfds = other._readfds;
+	_writefds = other._writefds;
+	_maxfd = other._maxfd;
+	_clients = other._clients;
+	return (*this);
 }
 
 Server::~Server() {}
@@ -322,6 +338,11 @@ std::string &Server::getServerName()
 	return _name;
 }
 
+std::string &Server::getRoot()
+{
+	return _root;
+}
+
 std::map<std::string, int> &Server::getPorts()
 {
 	return _ports;
@@ -377,4 +398,13 @@ std::string Server::getExtensionFromMimeType(const std::string &mimeType) {
 		return ".html";
 	else
 		return ".bin";
+}
+
+std::vector<Location> &Server::getLocations()
+{
+	return _locations;
+}
+
+void	Server::setServerName(std::string const &name){
+	_name = name;
 }
