@@ -14,105 +14,6 @@
 #define LOCATION "location"
 #define SERVER "server"
 
-bool pathExists(const std::string &path)
-{
-    const char *pathCStr = path.c_str();
-
-    struct stat fileInfo;
-    return stat(pathCStr, &fileInfo) == 0;
-}
-
-bool isNumeric(const std::string &str)
-{
-    for (std::size_t i = 0; i < str.length(); ++i)
-    {
-        if (!std::isdigit(str[i]))
-            return false;
-    }
-    return true;
-}
-
-// Fonction pour supprimer le ';' d'une chaîne
-std::string removeSemicolon(const std::string &input)
-{
-    size_t pos = input.find(';');
-    if (pos != std::string::npos)
-    {
-        return input.substr(0, pos);
-    }
-    return input;
-}
-
-// Classe adaptateur pour utiliser removeSemicolon avec l'opérateur >>
-class RemoveSemicolonAdapter
-{
-public:
-    RemoveSemicolonAdapter(std::istream &is) : is_(is) {}
-
-    template <typename T>
-    RemoveSemicolonAdapter &operator>>(T &val)
-    {
-        is_ >> token_;
-        val = removeSemicolon(token_);
-        return *this;
-    }
-
-private:
-    std::istream &is_;
-    std::string token_;
-};
-
-// Fonction utilitaire pour créer un adaptateur
-RemoveSemicolonAdapter removeSemicolon(std::istream &is)
-{
-    return RemoveSemicolonAdapter(is);
-}
-
-static std::string checkNbParam(int nb, std::istringstream &iss)
-{
-    std::string additionalValue;
-    std::string tmp;
-    int i = 0;
-    while (iss >> tmp)
-    {
-        if (tmp[0] == '#')
-            break;
-        i++;
-        additionalValue = tmp;
-    }
-    if (i > nb && nb > 0)
-        return "";
-    return removeSemicolon(additionalValue);
-}
-
-struct Location
-{
-    std::string path;
-    std::string root;
-    std::string index;
-    std::string autoindex;
-    std::map<std::string, std::string> cgi;
-    std::string limit_except;
-    std::string auth;
-    std::string upload;
-    Location() : path(""), root(""), index(""), autoindex(""), cgi(), limit_except(""), auth(""), upload("")
-    {
-    }
-};
-
-struct Server
-{
-    // std::set<std::string> listenPorts;
-    std::string root;
-    std::string serverName;
-    std::map<int, std::string> errorPage;
-    std::vector<Location> locations;
-};
-
-bool startsWith(const std::string &str, const std::string &prefix)
-{
-    return str.substr(0, prefix.size()) == prefix;
-}
 
 void announceError(std::string location, std::string type)
 {
@@ -184,14 +85,15 @@ bool directiveIsValid(T &toSave, std::istringstream &iss, std::string directive,
     return true;
 }
 
-int main()
+
+Server parsing(std::string fileName)
 {
-    std::ifstream inputFile("file.conf");
+    std::ifstream inputFile(fileName);
 
     if (!inputFile.is_open())
     {
         std::cerr << "Erreur lors de l'ouverture du fichier." << std::endl;
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     std::string line;
@@ -209,9 +111,9 @@ int main()
         if (token == "server{")
             currentServer = Server();
         else if (token == "root" && !directiveIsValid(currentServer.root, iss, token, SERVER, ""))
-                return -1;
+            exit(EXIT_FAILURE);
         else if (token == "server_name" && !directiveIsValid(currentServer.serverName, iss, token, SERVER, ""))
-                return -1;
+            exit(EXIT_FAILURE);
         // else if (token == "listen")
         // {
         //     // Récupérer le port d'écoute
@@ -252,7 +154,7 @@ int main()
             if (!currentServer.errorPage.empty())
             {
                 std::cout << "Server :Error: error_page directive is already set" << std::endl;
-                return 1; // Sortir avec une erreur
+                exit(EXIT_FAILURE);
             }
 
             // Récupérer la page d'erreur
@@ -263,14 +165,14 @@ int main()
             if (additionalValue.empty())
             {
                 std::cout << "Server :Error: error_page directive has to have ONE param" << std::endl;
-                return 1; // Sortir avec une erreur
+                exit(EXIT_FAILURE);
             }
 
             // Ajouter la paire à la map si errorPage est un nombre ATENTION VERIFIER LE PATH
             if (!isNumeric(errorPage))
             {
                 std::cout << "Server :Error: error_page directive must be an integer" << std::endl;
-                return 1; // Sortir avec une erreur
+                exit(EXIT_FAILURE);
             }
             if (!pathExists("./" + additionalValue))
             {
@@ -294,11 +196,11 @@ int main()
                 if (directive == "}")
                     break;
                 else if (directive == "root" && !directiveIsValid(currentLocation.root, locIss, directive, LOCATION, currentLocation.path))
-                    return -1;
+                    exit(EXIT_FAILURE);
                 else if (directive == "index" && !directiveIsValid(currentLocation.index, locIss, directive, LOCATION, currentLocation.path))
-                    return -1;
+                    exit(EXIT_FAILURE);
                 else if (directive == "autoindex" && !directiveIsValid(currentLocation.autoindex, locIss, directive, LOCATION, currentLocation.path))
-                    return -1;
+                    exit(EXIT_FAILURE);
                 else if (directive == "cgi")
                 {
                     std::string param;
@@ -307,14 +209,14 @@ int main()
                     if (additionalValue.empty())
                     {
                         std::cerr << "Erreur: La directive cgi doit avoir exactement un paramètre supplémentaire." << std::endl;
-                        return 1; // Sortir avec une erreur
+                        exit(EXIT_FAILURE);
                     }
                     currentLocation.cgi[param] = removeSemicolon(additionalValue);
                 }
                 else if (directive == "auth" && !directiveIsValid(currentLocation.auth, locIss, directive, LOCATION, currentLocation.path))
-                    return -1;
+                    exit(EXIT_FAILURE);
                 else if (directive == "upload" && !directiveIsValid(currentLocation.upload, locIss, directive, LOCATION, currentLocation.path))
-                    return -1;
+                    exit(EXIT_FAILURE);
                 else
                 {
                     // limit_except;
@@ -331,7 +233,7 @@ int main()
     if (servers.empty())
     {
         std::cout << "Missing server bloc" << std::endl;
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
@@ -339,59 +241,66 @@ int main()
         if (it->serverName.empty())
             it->serverName = "localhost";
     }
+// std::cout << "==========================================\n";
+    // // Traitement final
+    // for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
+    // {
+    //     // Root
+    //     std::cout << "Server \n- Root: " << it->root << std::endl;
+    //     // Server Name
+    //     std::cout << "- Server name: " << it->serverName << std::endl;
+    //     // Ports
+    //     std::cout << "- Listen Ports: ";
+    //     for (std::set<std::string>::iterator portIt = it->listenPorts.begin(); portIt != it->listenPorts.end(); ++portIt)
+    //     {
+    //         std::cout << *portIt << " ";
+    //     }
+    //     std::cout << std::endl;
+    //     // Error Page
+    //     for (std::map<int, std::string>::iterator errIt = it->errorPage.begin(); errIt != it->errorPage.end(); ++errIt)
+    //     {
+    //         std::cout << "- Error Page: ";
+    //         std::cout << errIt->first << " " << errIt->second;
+    //     }
+    //     std::cout << std::endl;
+    //     // Locations
+    //     for (std::vector<Location>::iterator locIt = it->locations.begin(); locIt != it->locations.end(); ++locIt)
+    //     {
+    //         std::cout << "- Location" << std::endl;
+    //         ;
+    //         std::cout << "\t- Path: " << locIt->path << std::endl;
+    //         if (!locIt->root.empty())
+    //             std::cout << "\t- Root: " << locIt->root << std::endl;
+    //         if (!locIt->index.empty())
+    //             std::cout << "\t- Index: " << locIt->index << std::endl;
+    //         if (!locIt->autoindex.empty())
+    //             std::cout << "\t- AutoIndex: " << locIt->autoindex << std::endl;
+    //         if (!locIt->cgi.empty())
+    //         {
+    //             for (std::map<std::string, std::string>::iterator cgiIt = locIt->cgi.begin(); cgiIt != locIt->cgi.end(); ++cgiIt)
+    //             {
+    //                 std::cout << "\t- cgi: ";
+    //                 std::cout << cgiIt->first << " " << cgiIt->second;
+    //             }
+    //             std::cout << std::endl;
+    //         }
 
-    std::cout << "==========================================\n";
-    // Traitement final
-    for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
-    {
-        // Root
-        std::cout << "Server \n- Root: " << it->root << std::endl;
-        // Server Name
-        std::cout << "- Server name: " << it->serverName << std::endl;
-        // Ports
-        std::cout << "- Listen Ports: ";
-        for (std::set<std::string>::iterator portIt = it->listenPorts.begin(); portIt != it->listenPorts.end(); ++portIt)
-        {
-            std::cout << *portIt << " ";
-        }
-        std::cout << std::endl;
-        // Error Page
-        for (std::map<int, std::string>::iterator errIt = it->errorPage.begin(); errIt != it->errorPage.end(); ++errIt)
-        {
-            std::cout << "- Error Page: ";
-            std::cout << errIt->first << " " << errIt->second;
-        }
-        std::cout << std::endl;
-        // Locations
-        for (std::vector<Location>::iterator locIt = it->locations.begin(); locIt != it->locations.end(); ++locIt)
-        {
-            std::cout << "- Location" << std::endl;
-            ;
-            std::cout << "\t- Path: " << locIt->path << std::endl;
-            if (!locIt->root.empty())
-                std::cout << "\t- Root: " << locIt->root << std::endl;
-            if (!locIt->index.empty())
-                std::cout << "\t- Index: " << locIt->index << std::endl;
-            if (!locIt->autoindex.empty())
-                std::cout << "\t- AutoIndex: " << locIt->autoindex << std::endl;
-            if (!locIt->cgi.empty())
-            {
-                for (std::map<std::string, std::string>::iterator cgiIt = locIt->cgi.begin(); cgiIt != locIt->cgi.end(); ++cgiIt)
-                {
-                    std::cout << "\t- cgi: ";
-                    std::cout << cgiIt->first << " " << cgiIt->second;
-                }
-                std::cout << std::endl;
-            }
+    //         if (!locIt->limit_except.empty())
+    //             std::cout << "\t- limit_except: " << locIt->limit_except << std::endl;
+    //         if (!locIt->auth.empty())
+    //             std::cout << "\t- auth: " << locIt->auth << std::endl;
+    //         if (!locIt->upload.empty())
+    //             std::cout << "\t- upload: " << locIt->upload << std::endl;
+    //     }
+    // }
 
-            if (!locIt->limit_except.empty())
-                std::cout << "\t- limit_except: " << locIt->limit_except << std::endl;
-            if (!locIt->auth.empty())
-                std::cout << "\t- auth: " << locIt->auth << std::endl;
-            if (!locIt->upload.empty())
-                std::cout << "\t- upload: " << locIt->upload << std::endl;
-        }
-    }
+    return servers[0];
+}
+
+
+int main()
+{
+    Server server = parsing("file.conf");
 
     return 0;
 }

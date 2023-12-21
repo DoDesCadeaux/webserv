@@ -52,6 +52,9 @@ class Server
 private:
 	std::map<std::string, int>		_ports;
 	std::string						_name;
+	std::string						_root;
+    std::map<int, std::string>		_errorPage;
+	std::vector<Location> 			_locations;
 	std::list<int>					_listfds;
 	fd_set							_allfds;
 	fd_set							_readfds;
@@ -61,7 +64,9 @@ private:
 
 public:
 	Server();
+	Server &operator=(const Server &other);
 	~Server();
+
 	void 						setSocket();
 	void						addFd(int fd);
 	void						addClientFd(int fd);
@@ -77,7 +82,10 @@ public:
 	static	std::string			getMimeType(const std::string& uri);
 	
 	std::string 				&getServerName();
+	std::string 				&getRoot();
 	std::map<std::string, int>	&getPorts();
+	std::vector<Location>		&getLocations();
+	void						setServerName(std::string const &name);
 
 };
 

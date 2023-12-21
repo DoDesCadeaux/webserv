@@ -11,17 +11,28 @@
 /* ************************************************************************** */
 
 #ifndef PARSOR_HPP
-# define PARSOR_HPP
+#define PARSOR_HPP
 
 #include <iostream>
 #include <fstream>
 #include "Ft.hpp"
 #include <vector>
+#include "Server.hpp"
+#include <sys/stat.h>
 
-class Parsor{
+#define ROOT "root"
+#define SERV_NAME "server_name"
+#define LISTEN "listen"
+#define ERR_PAGE "error_page"
+#define LOCATION "location"
+#define SERVER "server"
+
+class Server;
+class Parsor
+{
 public:
     static int parseIntegrity(std::string configName);
-    static int parse(std::string configName);
+    static Server parse(std::string configName);
 
 };
 
