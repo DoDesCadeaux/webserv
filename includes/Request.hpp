@@ -15,6 +15,7 @@ private:
 	std::string 							_requesturi;
 	std::string								_requestformat;
 	std::string								_requestbody;
+	std::string								_path;
 
 	std::map<std::string, std::string>		_requestheadertypes;
 
@@ -45,6 +46,10 @@ public:
 
 	bool		isValidProtocol();
 	void 		replaceProtocolTo(const std::string &newprotocol);
+
+///CGI
+const std::string	&getPath() const;
+void	setPath();
 };
 
 #endif

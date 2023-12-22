@@ -125,7 +125,10 @@ bool Server::recvAll(const int &fd)
 	{
 		Request request(std::string(buffer.begin(), buffer.end()));
 		_clients[fd]->setClientRequest(request);
-		Ft::printLogs(*this, *_clients[fd], REQUEST);
+///CGI
+// add path to request??
+///
+	Ft::printLogs(*this, *_clients[fd], REQUEST);
 		if (request.getHeader("Connection") == "keep-alive")
 			_clients[fd]->setKeepAlive(true);
 		else
@@ -234,6 +237,12 @@ void Server::run()
 							fdsToRemove.push_back(fd);
 							continue;
 						}
+						
+						if (isCGIRequest(_clients[fd]->getRequest())) {
+							handleCGIRequest(fd);
+							fdsToRemove.push_back(fd);
+							continue;
+						}
 					}
 					if (FD_ISSET(fd, &_writefds))
 					{
@@ -269,6 +278,22 @@ void Server::run()
 		}
 	}
 }
+
+//////////CGI
+bool	Server::isCGIRequest(const Request &request) {
+	if (request.getPath() == CGI_SCRIPT_PATH)
+		return (true);
+	if (request.getPath() == CGI_UPLOAD_SCRIPT_PATH && request.getProtocol() == "POST")
+		return (true);
+std::cout << "It's not a CGI request\r\n";
+	return (false);
+}
+
+void	Server::handleCGIRequest(int fd) {
+	fd = 0;
+}
+////////////
+
 
 void Server::newConnection(const int &listen_fd)
 {

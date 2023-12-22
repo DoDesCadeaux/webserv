@@ -20,6 +20,10 @@
 #include <cstdlib>
 
 # define BUFFER_SIZE 1024 //test values under 4
+///CGI
+# define CGI_SCRIPT_PATH "web/cgi-bin/..."
+# define CGI_UPLOAD_SCRIPT_PATH "web/cgi-bin/..." 
+///
 # define SERVER_ROOT "web"
 # define GREEN "\e[32m"
 # define NOCOL "\e[39m"
@@ -89,6 +93,10 @@ public:
 	std::map<std::string, int>	&getPorts();
 	std::vector<Location>		&getLocations();
 	void						setServerName(std::string const &name);
+
+	////////CGI
+	bool						isCGIRequest(const Request &request);
+	void						handleCGIRequest(int fd);
 
 };
 
