@@ -8,3 +8,4 @@ webserv
 .DS_Store
 *.DS_Store
 web/postedFile*
+a.out.dSYM
