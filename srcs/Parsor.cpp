@@ -58,15 +58,15 @@ RemoveSemicolonAdapter removeSemicolon(std::istream &is)
  */
 static char findEnd(std::string line)
 {
-    size_t stop = line.size();
-    for (size_t i = 0; i < stop; i++)
+    int stop = line.size();
+    for (int i = 0; i < stop; i++)
     {
         if (line[i] == '#')
             stop = i;
     }
-    for (size_t i = stop - 1; i >= 0; --i)
+    for (int i = stop - 1; i >= 0; --i)
     {
-        if (line[i] == ' ' || line[i] == '\t')
+		if (line[i] == ' ' || line[i] == '\t')
             continue;
         return line[i];
     }

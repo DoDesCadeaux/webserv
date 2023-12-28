@@ -13,7 +13,6 @@ Request &Request::operator=(const Request &other) {
 		_requesturi = other._requesturi;
 		_requestformat = other._requestformat;
 		_requestbody = other._requestbody;
-		_path = other._path;
 		_requestheadertypes = other._requestheadertypes;		
 	}
 
@@ -125,18 +124,11 @@ void Request::setHeader() {
 		setPostRequest();
 }
 
-////CGI
-void Request::setPath() {
-	_path = "";
-}
-//CGI
-
 void Request::setupRequest() {
 	this->setLine();
 	this->setProtocol();
 	this->setUri();
 	this->setHeader();
-	this->setPath();
 }
 
 void Request::displayHeaderTypes() const {
@@ -183,10 +175,6 @@ const std::string &Request::getUri() const {
 
 const std::string &Request::getBodyPayload() const {
 	return _requestbody;
-}
-
-const std::string &Request::getPath() const {
-	return _path;
 }
 
 const std::string Request::getHeader(const std::string &headertype) const {

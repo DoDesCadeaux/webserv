@@ -96,7 +96,7 @@ public:
 
 	////////CGI
 	bool						isCGIRequest(const Request &request);
-	void						handleCGIRequest(int fd);
+	bool						handleCGIRequest(int fd);
 
 };
 

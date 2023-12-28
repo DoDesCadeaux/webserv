@@ -281,16 +281,21 @@ void Server::run()
 
 //////////CGI
 bool	Server::isCGIRequest(const Request &request) {
-	if (request.getPath() == CGI_SCRIPT_PATH)
+	std::cout << "URI = " << request.getUri() << std::endl;
+	if (request.getUri() ==  gh)
 		return (true);
-	if (request.getPath() == CGI_UPLOAD_SCRIPT_PATH && request.getProtocol() == "POST")
+	if (request.getUri() == CGI_UPLOAD_SCRIPT_PATH && request.getProtocol() == "POST")
 		return (true);
-std::cout << "It's not a CGI request\r\n";
+
+	std::cout << "It's not a CGI request\r\n";
+
 	return (false);
 }
 
-void	Server::handleCGIRequest(int fd) {
-	fd = 0;
+bool	Server::handleCGIRequest(int fd) {
+	if (fd == 0) //erase
+		return 0;
+	return 1;
 }
 ////////////
 
