@@ -206,6 +206,7 @@ void Server::run()
 {
 	int res;
 
+	int count = 0;
 	while (true)
 	{
 		struct timeval timeout;
@@ -227,6 +228,8 @@ void Server::run()
 				{
 					usleep(500);
 					newConnection(fd);
+					std::cout << count << std::endl;
+					++count;
 				}
 				if (_clients.find(fd) != _clients.end())
 				{
@@ -281,21 +284,46 @@ void Server::run()
 
 //////////CGI
 bool	Server::isCGIRequest(const Request &request) {
-	std::cout << "URI = " << request.getUri() << std::endl;
-	if (request.getUri() ==  gh)
+	std::cout << "Uri = " << request.getUri() << std::endl;
+	std::cout << "Protocol = " << request.getProtocol() << std::endl;
+
+	if (request.getUri() == CGI_SCRIPT_PATH)
 		return (true);
-	if (request.getUri() == CGI_UPLOAD_SCRIPT_PATH && request.getProtocol() == "POST")
+	if (request.getUri() == CGI_UPLOAD_SCRIPT_PATH /*&& request.getProtocol() == "POST"*/) {
+std::cout << "---Form html page---\n";
 		return (true);
+	}
 
 	std::cout << "It's not a CGI request\r\n";
 
 	return (false);
 }
 
-bool	Server::handleCGIRequest(int fd) {
-	if (fd == 0) //erase
-		return 0;
-	return 1;
+bool	Server::handleCGIRequest(int fd) { // --> should I relly return something?
+	int 	status = 0;
+	pid_t 	pid;
+
+	pid = fork();
+	if (pid < 0) {			// Handle error
+		return (1);
+	}
+	else if (pid == 0) {	// Child process
+		// Rdirect stdin and stdout
+		dup2(fd, 0);
+		dup2(fd, 1);
+
+		// set env variables
+		//Server::setEnv() ??
+
+		//execute CGI
+		//execve() ??
+		//protect execve()
+
+	}
+	else {					// Parent process
+		waitpid(pid, &status, 0);
+	}
+	return (status); // ??
 }
 ////////////
 
@@ -339,23 +367,24 @@ void Server::killConnection(const int &fd)
 	removeFd(fd);
 }
 
-std::string Server::getResourceContent(const std::string &uri)
-{
+std::string Server::getResourceContent(const std::string &uri) {
 	std::string fullpath = SERVER_ROOT;
+
+//	std::cout << "uri = " << uri << std::endl;
 
 	if (uri == "/" || uri == "/index")
 		fullpath += "/index.html";
 	else if (uri == "/favicon.ico")
 		fullpath += "/favicon.ico";
-	else
-	{
+//	else if (uri == "/form")
+//		fullpath += "/form.html";
+	else {
 		fullpath += uri;
 		if (uri.find('.') == std::string::npos)
 			fullpath += ".html";
 	}
 
-	if (Ft::fileExists(fullpath))
-	{
+	if (Ft::fileExists(fullpath)) {
 		std::ifstream file(fullpath.c_str(), std::ios::binary);
 		return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	}
