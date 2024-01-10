@@ -20,8 +20,8 @@
 #include <cstdlib>
 
 # define BUFFER_SIZE 1024 //test values under 4
-# define SERVER_ROOT "web"
 # define GREEN "\e[32m"
+# define COL "\e[36m"
 # define NOCOL "\e[39m"
 # define RED "\e[91m"
 
@@ -38,11 +38,13 @@ struct Location
     std::string root;
     std::string index;
     std::string autoindex;
-    std::map<std::string, std::string> cgi;
-    std::string limit_except;
     std::string auth;
     std::string upload;
-    Location() : path(""), root(""), index(""), autoindex(""), cgi(), limit_except(""), auth(""), upload("")
+	std::string	max_body; ///ATTENTION C'EST UN STRING POUR CAUSE DE FACTORISATION, OENSER A FAIRE LE ATOI AVANT UTILISATION
+	std::vector<std::string> limit_except;
+    std::map<std::string, std::string> cgi;
+
+    Location() : path(""), root(""), index(""), autoindex(""), auth(""), upload(""), max_body(""), limit_except(), cgi()
     {
     }
 };
@@ -50,45 +52,29 @@ struct Location
 class Server
 {
 private:
-	std::map<std::string, int>		_ports;
-	std::string						_name;
 	std::string						_root;
-    std::map<int, std::string>		_errorPage;
+	std::string						_name;
+	std::map<std::string, int>		_ports;
+    std::map<int, std::string>		_errorPages;
 	std::vector<Location> 			_locations;
-	std::list<int>					_listfds;
-	fd_set							_allfds;
-	fd_set							_readfds;
-	fd_set							_writefds;
-	int 							_maxfd;
-	std::map<int, Client*>			_clients;
+	std::vector<int>				_clients;
 
 public:
 	Server();
 	Server &operator=(const Server &other);
 	~Server();
 
-	void				saveFile(const int &fd, const std::string &imageData, const std::string &directoryPath, const std::string &mimeType);
-	static	std::string getExtensionFromMimeType(const std::string &mimeType);
+	void							addClient(const int &fd);
 
-	void 						setSocket();
-	void						addFd(int fd);
-	void						addClientFd(int fd);
-	void						removeFd(int fd);
-	void						run();
-	bool						sendAll(const int &fd);
-	bool						recvAll(const int &fd);
-	void						newConnection(const int &fd);
-	void						killConnection(const int &fd);
-	void						saveImage(const std::string& imageData, const std::string& filePath);
-	static	std::string			generateRandomFileName(const std::string& extension);
-	static	std::string 		getResourceContent(const std::string &uri);
-	static	std::string			getMimeType(const std::string& uri);
-	
-	std::string 				&getServerName();
-	std::string 				&getRoot();
-	std::map<std::string, int>	&getPorts();
-	std::vector<Location>		&getLocations();
-	void						setServerName(std::string const &name);
+	std::map<std::string, int>		&getPorts();
+	std::string 					&getServerName();
+	std::string 					&getRoot();
+	std::vector<Location>			&getLocations();
+	std::vector<int>				&getClients();
+	std::map<int, std::string> 		&getErrorPages();
+	Location 						&getLocationByPath(const std::string& path);
+
+	void							setServerName(std::string const &name);
 
 };
 

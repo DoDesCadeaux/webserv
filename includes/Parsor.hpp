@@ -18,6 +18,7 @@
 #include "Ft.hpp"
 #include <vector>
 #include "Server.hpp"
+#include "MasterServer.hpp"
 #include <sys/stat.h>
 
 #define ROOT "root"
@@ -27,13 +28,12 @@
 #define LOCATION "location"
 #define SERVER "server"
 
-class Server;
+class MasterServer;
 class Parsor
 {
 public:
     static int parseIntegrity(std::string configName);
-    static std::vector<Server> parse(std::string configName);
-
+    static MasterServer parse(std::string configName);
 };
 
 #endif

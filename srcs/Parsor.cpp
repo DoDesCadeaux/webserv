@@ -128,14 +128,6 @@ int Parsor::parseIntegrity(std::string configName)
     return 1;
 }
 
-bool pathExists(const std::string &path)
-{
-    const char *pathCStr = path.c_str();
-
-    struct stat fileInfo;
-    return stat(pathCStr, &fileInfo) == 0;
-}
-
 bool isNumeric(const std::string &str)
 {
     for (std::size_t i = 0; i < str.length(); ++i)
@@ -163,11 +155,6 @@ static std::string checkNbParam(int nb, std::istringstream &iss)
     return removeSemicolon(additionalValue);
 }
 
-bool startsWith(const std::string &str, const std::string &prefix)
-{
-    return str.substr(0, prefix.size()) == prefix;
-}
-
 void announceError(std::string location, std::string type)
 {
     if (location.empty())
@@ -176,8 +163,7 @@ void announceError(std::string location, std::string type)
         std::cout << type << " " << location << ": error: ";
 }
 
-template <typename T>
-bool alreadySet(T &toSave, std::string directive, std::string type, std::string location)
+bool alreadySet(std::string &toSave, std::string directive, std::string type, std::string location)
 {
     if (!toSave.empty())
     {
@@ -188,10 +174,20 @@ bool alreadySet(T &toSave, std::string directive, std::string type, std::string 
     return true;
 }
 
-template <typename T>
-bool goodArg(T &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
+bool goodArg(std::string &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
 {
     removeSemicolon(iss) >> toSave;
+    if (directive == "client_max_body_size")
+    {
+        if (!isNumeric(toSave))
+        {
+            announceError(location, type);
+            std::cout << directive << " directive"
+                      << "must be an integer" << std::endl;
+            return false;
+        }
+    }
+
     std::string additionalValue = checkNbParam(0, iss);
     if (!additionalValue.empty())
     {
@@ -208,10 +204,10 @@ bool goodArg(T &toSave, std::istringstream &iss, std::string directive, std::str
     return true;
 }
 
-template <typename T>
-bool directiveIsValid(T &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
+bool directiveIsValid(std::string &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
 {
-    if (directive == "root" || directive == "server_name" || directive == "index" || directive == "autoindex" || directive == "auth" || directive == "upload")
+
+    if (directive == "root" || directive == "server_name" || directive == "index" || directive == "autoindex" || directive == "auth" || directive == "upload" || directive == "client_max_body_size")
     {
         if (!alreadySet(toSave, directive, type, location))
             return false;
@@ -226,8 +222,8 @@ bool directiveIsValid(T &toSave, std::istringstream &iss, std::string directive,
     }
     if (directive == "root")
     {
-        toSave = startsWith(toSave, "./") ? toSave : (startsWith(toSave, "/") ? "." + toSave : "./" + toSave);
-        if (!pathExists(toSave))
+        toSave = Ft::startsWith(toSave, "./") ? toSave : (Ft::startsWith(toSave, "/") ? "." + toSave : "./" + toSave);
+        if (!Ft::fileExists(toSave))
         {
             announceError(location, type);
             std::cout << "invalid root " << toSave << std::endl;
@@ -238,20 +234,12 @@ bool directiveIsValid(T &toSave, std::istringstream &iss, std::string directive,
     return true;
 }
 
-void setSocket(Server &server, std::string port)
+void setSocket(MasterServer &masterServer, Server &server, std::string port)
 {
     struct addrinfo hint, *servinfo;
     int server_fd;
     int yes = 1;
 
-    // std::string port1 = "1918";
-    // std::string port2 = "8081";
-    // _ports.insert(std::make_pair(port1, 0));
-    // _ports.insert(std::make_pair(port2, 0));
-
-    // for (std::map<std::string, int>::iterator it = _ports.begin(); it != _ports.end(); it++)
-    // {
-    // On s'assure que la structure est entierement vide
     memset(&hint, 0, sizeof(hint)); // Pas oublier de free quand un truc fail après
     // Parametrage de la structure tampon (hint)
     hint.ai_family = AF_UNSPEC;     // Quelque soit l'ipv
@@ -272,7 +260,6 @@ void setSocket(Server &server, std::string port)
         perror("Socket");
         exit(EXIT_FAILURE);
     }
-    // it->second = server_fd;
 
     // Set up socket en non-bloquant
     fcntl(server_fd, F_SETFL, O_NONBLOCK);
@@ -300,14 +287,15 @@ void setSocket(Server &server, std::string port)
     // Free du addrinfo
     freeaddrinfo(servinfo);
 
-    server.addFd(server_fd);
     server.getPorts().insert(std::make_pair(port, server_fd));
 
-    // }
+    masterServer.addFd(server_fd);
+    masterServer.getPorts().insert(std::make_pair(port, server_fd));
 }
 
-std::vector<Server> Parsor::parse(std::string fileName)
+MasterServer Parsor::parse(std::string fileName)
 {
+    MasterServer masterServer;
     std::ifstream inputFile(fileName);
 
     if (!inputFile.is_open())
@@ -339,78 +327,53 @@ std::vector<Server> Parsor::parse(std::string fileName)
             std::string additionalValue = checkNbParam(0, iss);
             //->//Check nombre de parametres
             if (!additionalValue.empty())
-            {
-                std::cout << "Server :Error: too many param for listen directive" << std::endl;
-                exit(EXIT_FAILURE);
-            }
+                exit(Ft::print("Server :Error :too many param for listen directive", NULL, EXIT_FAILURE));
             //->// Vérifier qu'il y a bien un port
             if (listenPort.empty())
-            {
-                std::cout << "Server :Error: missing param for listen directive" << std::endl;
-                exit(EXIT_FAILURE);
-            }
+                exit(Ft::print("Server :Error: missing param for listen directive", NULL, EXIT_FAILURE));
             //->// Vérifier que c'est bien un nombre
             if (!isNumeric(listenPort))
-            {
-                std::cout << "Server :Error: port '" << listenPort << "' is not a valid port" << std::endl;
-                exit(EXIT_FAILURE);
-            }
+                exit(Ft::print("Server :Error: port '@' is not a valid port", listenPort, EXIT_FAILURE));
             //->// Vérifier si le port d'écoute existe déjà dans le current Server
             if (currentServer.getPorts().find(listenPort) != currentServer.getPorts().end())
-            {
-                std::cout << "Server :Error: port " << listenPort << " already set" << std::endl;
-                exit(EXIT_FAILURE);
-            }
+                exit(Ft::print("Server :Error: port '@' is already set", listenPort, EXIT_FAILURE));
             for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
             {
-                // std::cout << it->getServerName() << std::endl;
                 std::map<std::string, int> servPorts = it->getPorts();
 
                 for (std::map<std::string, int>::iterator itPort = servPorts.begin(); itPort != servPorts.end(); itPort++)
                 {
+                    std::cout << itPort->first << " : " << itPort->second << std::endl;
                     if (servPorts.find(listenPort) != servPorts.end())
-                    {
-                        std::cout << "Server : Error: port " << listenPort << " already used by another server" << std::endl;
-                        exit(EXIT_FAILURE);
-                    }
+                        exit(Ft::print("Server :Error: port @ is already used by another server", listenPort, EXIT_FAILURE));
                 }
             }
-            setSocket(currentServer, listenPort);
+            setSocket(masterServer, currentServer, listenPort);
         }
-        // else if (token == "error_page")
-        // {
-        //     // Vérifier si error_page a déjà été initialisé
-        //     // Quid de l'utilité on peux avoir error page 503 maybe
-        //     if (!currentServer.errorPage.empty())
-        //     {
-        //         std::cout << "Server :Error: error_page directive is already set" << std::endl;
-        //         exit(EXIT_FAILURE);
-        //     }
+        else if (token == "error_page")
+        {
+            // Récupérer la page d'erreur
+            std::string errorPage;
+            iss >> errorPage;
 
-        //     // Récupérer la page d'erreur
-        //     std::string errorPage;
-        //     iss >> errorPage;
+            std::string additionalValue = checkNbParam(1, iss);
+            if (additionalValue.empty())
+                exit(Ft::print("Server :Error: error_page directive has to have ONE param", NULL, EXIT_FAILURE));
 
-        //     std::string additionalValue = checkNbParam(1, iss);
-        //     if (additionalValue.empty())
-        //     {
-        //         std::cout << "Server :Error: error_page directive has to have ONE param" << std::endl;
-        //         exit(EXIT_FAILURE);
-        //     }
+            // Ajouter la paire à la map si errorPage est un nombre ATENTION VERIFIER LE PATH
+            if (!isNumeric(errorPage))
+                exit(Ft::print("Server :Error: error_page directive must be an integer", NULL, EXIT_FAILURE));
 
-        //     // Ajouter la paire à la map si errorPage est un nombre ATENTION VERIFIER LE PATH
-        //     if (!isNumeric(errorPage))
-        //     {
-        //         std::cout << "Server :Error: error_page directive must be an integer" << std::endl;
-        //         exit(EXIT_FAILURE);
-        //     }
-        //     if (!pathExists("./" + additionalValue))
-        //     {
-        //         std::cout << "Server :Error: " << additionalValue << " invalid path for error_page directive " << errorPage << std::endl;
-        //         // return 1;
-        //     }
-        //     currentServer.errorPage[std::atoi(errorPage.c_str())] = removeSemicolon(additionalValue);
-        // }
+            if (!Ft::fileExists("./" + additionalValue))
+                exit(Ft::print("Server :Error: invalid path for error_page @", errorPage, EXIT_FAILURE));
+
+            for (std::map<int, std::string>::iterator itErrPages = currentServer.getErrorPages().begin(); itErrPages != currentServer.getErrorPages().end(); itErrPages++)
+            {
+                if (std::atoi(errorPage.c_str()) == itErrPages->first)
+                    exit(Ft::print("Server :Error: error @ is already defined", errorPage, EXIT_FAILURE));
+            }
+            currentServer.getErrorPages()[std::atoi(errorPage.c_str())] = removeSemicolon(additionalValue);
+        }
         else if (token == "location")
         {
             currentLocation = Location();
@@ -447,18 +410,47 @@ std::vector<Server> Parsor::parse(std::string fileName)
                     exit(EXIT_FAILURE);
                 else if (directive == "upload" && !directiveIsValid(currentLocation.upload, locIss, directive, LOCATION, currentLocation.path))
                     exit(EXIT_FAILURE);
+                else if (directive == "client_max_body_size" && !directiveIsValid(currentLocation.max_body, locIss, directive, LOCATION, currentLocation.path))
+                    exit(EXIT_FAILURE);
+                else if (directive == "limit_except")
+                {
+                    std::string tmp;
+                    int i = 0;
+                    while (locIss >> tmp)
+                    {
+                        tmp = removeSemicolon(tmp);
+                        if (tmp != "GET" && tmp != "POST" && tmp != "DELETE")
+                        {
+                            std::cout << tmp << " -> ";
+                            std::cout << "invalid method\n";
+                            exit(EXIT_FAILURE);
+                        }
+                        for (std::vector<std::string>::iterator it = currentLocation.limit_except.begin(); it != currentLocation.limit_except.end(); i++)
+                        {
+                            if (tmp == *it)
+                            {
+                                std::cout << "method already defined\n";
+                                exit(EXIT_FAILURE);
+                            }
+                            currentLocation.limit_except.push_back(tmp);
+                        }
+                        i++;
+                    }
+                    if (i == 0)
+                    {
+                        std::cout << "missing arg\n";
+                        exit(EXIT_FAILURE);
+                    }
+                }
                 else
                 {
-                    // limit_except;
-                    // client_max_body_size
+                    // invalid directive
                 }
             }
             currentServer.getLocations().push_back(currentLocation);
         }
         else if (token == "}")
-        {
             servers.push_back(currentServer);
-        }
     }
 
     // Vérification
@@ -473,58 +465,8 @@ std::vector<Server> Parsor::parse(std::string fileName)
         if (it->getServerName().empty())
             it->setServerName("localhost");
     }
-    // std::cout << "==========================================\n";
-    // // Traitement final
-    // for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
-    // {
-    //     // Root
-    //     std::cout << "Server \n- Root: " << it->root << std::endl;
-    //     // Server Name
-    //     std::cout << "- Server name: " << it->serverName << std::endl;
-    //     // Ports
-    //     std::cout << "- Listen Ports: ";
-    //     for (std::set<std::string>::iterator portIt = it->listenPorts.begin(); portIt != it->listenPorts.end(); ++portIt)
-    //     {
-    //         std::cout << *portIt << " ";
-    //     }
-    //     std::cout << std::endl;
-    //     // Error Page
-    //     for (std::map<int, std::string>::iterator errIt = it->errorPage.begin(); errIt != it->errorPage.end(); ++errIt)
-    //     {
-    //         std::cout << "- Error Page: ";
-    //         std::cout << errIt->first << " " << errIt->second;
-    //     }
-    //     std::cout << std::endl;
-    //     // Locations
-    //     for (std::vector<Location>::iterator locIt = it->locations.begin(); locIt != it->locations.end(); ++locIt)
-    //     {
-    //         std::cout << "- Location" << std::endl;
-    //         ;
-    //         std::cout << "\t- Path: " << locIt->path << std::endl;
-    //         if (!locIt->root.empty())
-    //             std::cout << "\t- Root: " << locIt->root << std::endl;
-    //         if (!locIt->index.empty())
-    //             std::cout << "\t- Index: " << locIt->index << std::endl;
-    //         if (!locIt->autoindex.empty())
-    //             std::cout << "\t- AutoIndex: " << locIt->autoindex << std::endl;
-    //         if (!locIt->cgi.empty())
-    //         {
-    //             for (std::map<std::string, std::string>::iterator cgiIt = locIt->cgi.begin(); cgiIt != locIt->cgi.end(); ++cgiIt)
-    //             {
-    //                 std::cout << "\t- cgi: ";
-    //                 std::cout << cgiIt->first << " " << cgiIt->second;
-    //             }
-    //             std::cout << std::endl;
-    //         }
 
-    //         if (!locIt->limit_except.empty())
-    //             std::cout << "\t- limit_except: " << locIt->limit_except << std::endl;
-    //         if (!locIt->auth.empty())
-    //             std::cout << "\t- auth: " << locIt->auth << std::endl;
-    //         if (!locIt->upload.empty())
-    //             std::cout << "\t- upload: " << locIt->upload << std::endl;
-    //     }
-    // }
+    masterServer.setServer(servers);
 
-    return servers;
+    return masterServer;
 }

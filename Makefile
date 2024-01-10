@@ -24,6 +24,7 @@ INCLUDE_PATH	=	./includes
 
 SRCS			=	Ft.cpp\
 					Parsor.cpp\
+					MasterServer.cpp\
 					Server.cpp\
 					Request.cpp\
 					Client.cpp\

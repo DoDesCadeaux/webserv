@@ -13,8 +13,9 @@ void HttpResponse::setNormalResponse(int statuscode, const std::string &statusme
 	std::map<std::string, std::string> headers;
 
 	if (statuscode == 302) {
-		std::string lastfileName = lastfile.substr(4);
-		headers["Location"] = "http://localhost:8081/" + lastfileName;
+		// std::string lastfileName = lastfile.substr(4);
+		// std::cout << RED << lastfile << std::endl << " apres sub " << lastfileName << NOCOL << std::endl;
+		headers["Location"] = "/" + lastfile;
 	}
 	else {
 		headers["Content-Type"] = mimeType;

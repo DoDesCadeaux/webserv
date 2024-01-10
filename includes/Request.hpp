@@ -8,6 +8,11 @@
 # include <vector>
 # include <sstream>
 
+# define GREEN "\e[32m"
+# define COL "\e[36m"
+# define NOCOL "\e[39m"
+# define RED "\e[91m"
+
 class Request {
 private:
 	std::string 							_requestline;
