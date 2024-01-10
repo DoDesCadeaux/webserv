@@ -77,7 +77,6 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 	std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
 	std::string fullpath = getServerByClientSocket(fd).getRoot();
 
-	std::cout << COL << uri << NOCOL << std::endl;
 	Server server = getServerByClientSocket(fd);
 	for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
 	{
@@ -99,7 +98,6 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 			fullpath += ".html";
 	}
 
-	std::cout << COL << fullpath << NOCOL << std::endl;
 	if (Ft::fileExists(fullpath))
 	{
 		std::ifstream file(fullpath.c_str(), std::ios::binary);
