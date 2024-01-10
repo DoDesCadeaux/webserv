@@ -256,8 +256,11 @@ bool MasterServer::sendAll(const int &fd)
 	std::string uri = _clients[fd]->getRequestUri();
 	HttpResponse response;
 
+	std::cout << COL << uri << NOCOL << std::endl;
 	if (_clients[fd]->getRequestProtocol() == "GET")
+	{
 		content = getResourceContent(uri, fd);
+	}
 	else if (_clients[fd]->getRequestProtocol() == "POST")
 	{
 		std::ifstream file(_clients[fd]->getLastFilePath());
@@ -276,8 +279,18 @@ bool MasterServer::sendAll(const int &fd)
 
 	if (content.empty())
 	{
-		response.setErrorResponse(404, "Not Found");
-		_clients[fd]->setClientResponse(response);
+		Server server = getServerByClientSocket(fd);
+		for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
+		{
+			if (it->first == 404)
+			{
+				content = getResourceContent(it->second, fd);
+				response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
+				break;
+			}
+		}
+		if (content.empty())
+			response.setErrorResponse(404, "Not Found");
 	}
 	else
 	{
@@ -286,8 +299,8 @@ bool MasterServer::sendAll(const int &fd)
 			response.setNormalResponse(200, "OK", content, mimeType, _clients[fd]->getLastFilePath());
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 			response.setNormalResponse(302, "Found", content, mimeType, _clients[fd]->getLastFilePath());
-		_clients[fd]->setClientResponse(response);
 	}
+	_clients[fd]->setClientResponse(response);
 
 	// Faire la fonction de factorisation sur le HttpResponse reponse -> Faire l'operateur d'assignement (HttpResponse & operator=(const  HttpResponse &other))
 
