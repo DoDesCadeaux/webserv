@@ -313,7 +313,7 @@ std::string generateDirectoryListing(std::string directoryPath) {
 		directoryPath += "./";
 	}
 	std::vector<std::string> contents = getDirectoryContents(directoryPath);
-	std::string html = "<!DOCTYPE html><html><head><title>Index of " + directoryPath + "</title></head><body><h1>Index of " + directoryPath + "</h1><ul><li><a href=\"../\">../</a></li><hr>";
+	std::string html = "<!DOCTYPE html><html><head><title>Index of " + directoryPath.substr(0, directoryPath.find("/./")) + "</title></head><body><h1>Index of " + directoryPath.substr(0, directoryPath.find("/./")) + "</h1><ul><li><a href=\"../\">../</a></li><hr>";
 
 	for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it) {
 		const std::string& item = *it;
