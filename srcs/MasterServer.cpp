@@ -13,7 +13,7 @@ MasterServer::~MasterServer()
 {
 }
 
-MasterServer	&MasterServer::operator=(MasterServer const &other)
+MasterServer &MasterServer::operator=(MasterServer const &other)
 {
 	_ports = other._ports;
 	_listfds = other._listfds;
@@ -26,27 +26,27 @@ MasterServer	&MasterServer::operator=(MasterServer const &other)
 }
 
 // Setter
-void 			MasterServer::setServer(std::vector<Server> &servers)
+void MasterServer::setServer(std::vector<Server> &servers)
 {
 	_servers = servers;
 }
 
 // Getter private var
-std::map<std::string, int> 	&MasterServer::getPorts()
+std::map<std::string, int> &MasterServer::getPorts()
 {
 	return _ports;
 }
-std::vector<Server> 		&MasterServer::getServers()
+std::vector<Server> &MasterServer::getServers()
 {
 	return _servers;
 }
-std::map<int, Client *> 	&MasterServer::getClients()
+std::map<int, Client *> &MasterServer::getClients()
 {
 	return _clients;
 }
 
 // General getter
-Server 			&MasterServer::getServerBySocketPort(int port)
+Server &MasterServer::getServerBySocketPort(int port)
 {
 	for (std::vector<Server>::iterator it = getServers().begin(); it != getServers().end(); ++it)
 	{
@@ -58,7 +58,7 @@ Server 			&MasterServer::getServerBySocketPort(int port)
 	}
 	throw std::runtime_error("Server not found");
 }
-Server 			&MasterServer::getServerByClientSocket(int fd)
+Server &MasterServer::getServerByClientSocket(int fd)
 {
 	for (std::vector<Server>::iterator it = getServers().begin(); it != getServers().end(); ++it)
 	{
@@ -71,25 +71,35 @@ Server 			&MasterServer::getServerByClientSocket(int fd)
 	throw std::runtime_error("Server not found");
 }
 
-//Statics Utils
+// Statics Utils
 std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 {
 	std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
 	std::string fullpath = getServerByClientSocket(fd).getRoot();
 
-	
-	if (uri == "/" || uri == "/index")
-		fullpath += "/index.html";
-	else if (Ft::fileExists(tmp))
+	std::cout << COL << uri << NOCOL << std::endl;
+	Server server = getServerByClientSocket(fd);
+	for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
+	{
+		if (it->path == uri)
+		{
+			if (!it->root.empty())
+				fullpath = it->root;
+			if (!it->index.empty())
+				tmp = fullpath + "/" + it->index;
+		}
+	}
+	if (Ft::fileExists(tmp))
 		fullpath = tmp;
 	else
 	{
-		//Quid du autoindex
+		// Quid du autoindex
 		fullpath += uri;
 		if (uri.find('.') == std::string::npos)
 			fullpath += ".html";
 	}
 
+	std::cout << COL << fullpath << NOCOL << std::endl;
 	if (Ft::fileExists(fullpath))
 	{
 		std::ifstream file(fullpath.c_str(), std::ios::binary);
@@ -102,43 +112,43 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 static std::string getExtensionFromMimeType(const std::string &mimeType)
 {
 	if (mimeType.find("image/jpeg") != std::string::npos)
-       return ".jpeg";
-    else if (mimeType.find("image/png") != std::string::npos)
-       return ".png";
-    else if (mimeType.find("image/jpg") != std::string::npos)
-       return ".jpg";
-    else if (mimeType.find("image/gif") != std::string::npos)
-       return ".gif";
-    else if (mimeType.find("text/plain") != std::string::npos)
-       return ".txt";
-    else if (mimeType.find("text/html") != std::string::npos)
-       return ".html";
-    else if (mimeType.find("application/pdf") != std::string::npos)
-       return ".pdf";
-    else
-       return ".bin";
+		return ".jpeg";
+	else if (mimeType.find("image/png") != std::string::npos)
+		return ".png";
+	else if (mimeType.find("image/jpg") != std::string::npos)
+		return ".jpg";
+	else if (mimeType.find("image/gif") != std::string::npos)
+		return ".gif";
+	else if (mimeType.find("text/plain") != std::string::npos)
+		return ".txt";
+	else if (mimeType.find("text/html") != std::string::npos)
+		return ".html";
+	else if (mimeType.find("application/pdf") != std::string::npos)
+		return ".pdf";
+	else
+		return ".bin";
 }
 
-static std::string getMimeType(const std::string &uri) {
-    if (Ft::endsWith(uri, ".html"))
-       return "text/html";
-    else if (Ft::endsWith(uri, ".ico"))
-       return "image/x-icon";
-    else if (Ft::endsWith(uri, ".jpeg"))
-       return "image/jpeg";
-    else if (Ft::endsWith(uri, ".jpg"))
-       return "image/jpg";
-    else if (Ft::endsWith(uri, ".png"))
-       return "image/jpg";
-    else if (Ft::endsWith(uri, ".gif"))
-       return "image/gif";
-    else if (Ft::endsWith(uri, ".txt"))
-       return "text/plain";
+static std::string getMimeType(const std::string &uri)
+{
+	if (Ft::endsWith(uri, ".html"))
+		return "text/html";
+	else if (Ft::endsWith(uri, ".ico"))
+		return "image/x-icon";
+	else if (Ft::endsWith(uri, ".jpeg"))
+		return "image/jpeg";
+	else if (Ft::endsWith(uri, ".jpg"))
+		return "image/jpg";
+	else if (Ft::endsWith(uri, ".png"))
+		return "image/jpg";
+	else if (Ft::endsWith(uri, ".gif"))
+		return "image/gif";
+	else if (Ft::endsWith(uri, ".txt"))
+		return "text/plain";
 	else if (Ft::endsWith(uri, ".pdf"))
-       return "application/pdf";
-    return "text/html";
+		return "application/pdf";
+	return "text/html";
 }
-
 
 // Methods
 void MasterServer::run()
@@ -152,7 +162,6 @@ void MasterServer::run()
 		timeout.tv_usec = 0;
 		_readfds = _allfds;
 		_writefds = _allfds;
-
 
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 		if (res == -1)
@@ -221,7 +230,8 @@ bool MasterServer::recvAll(const int &fd)
 	while (true)
 	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
-		if (bytesRead > 0){
+		if (bytesRead > 0)
+		{
 			buffer.insert(buffer.end(), tmp, tmp + bytesRead);
 		}
 		else
@@ -250,11 +260,14 @@ bool MasterServer::sendAll(const int &fd)
 
 	if (_clients[fd]->getRequestProtocol() == "GET")
 		content = getResourceContent(uri, fd);
-	else if (_clients[fd]->getRequestProtocol() == "POST") {
+	else if (_clients[fd]->getRequestProtocol() == "POST")
+	{
 		std::ifstream file(_clients[fd]->getLastFilePath());
 		std::string line;
-		if (file.is_open()) {
-			while (getline(file, line)) {
+		if (file.is_open())
+		{
+			while (getline(file, line))
+			{
 				content += line + "\r\n";
 			}
 			file.close();
@@ -263,7 +276,8 @@ bool MasterServer::sendAll(const int &fd)
 			std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
 	}
 
-	if (content.empty()){
+	if (content.empty())
+	{
 		response.setErrorResponse(404, "Not Found");
 		_clients[fd]->setClientResponse(response);
 	}
@@ -277,7 +291,7 @@ bool MasterServer::sendAll(const int &fd)
 		_clients[fd]->setClientResponse(response);
 	}
 
-	//Faire la fonction de factorisation sur le HttpResponse reponse -> Faire l'operateur d'assignement (HttpResponse & operator=(const  HttpResponse &other))
+	// Faire la fonction de factorisation sur le HttpResponse reponse -> Faire l'operateur d'assignement (HttpResponse & operator=(const  HttpResponse &other))
 
 	unsigned int len = response.getResponse().length();
 	unsigned int total = 0;
@@ -315,14 +329,14 @@ void MasterServer::saveFile(const int &fd, const std::string &fileData, const st
 	std::string directoryPath = !loc.upload.empty() ? loc.upload : "./tmp/";
 
 	std::string extension = getExtensionFromMimeType(mimeType);
-	//Si le directory path existe pas il faut le créer
+	// Si le directory path existe pas il faut le créer
 	if (!Ft::fileExists(directoryPath))
 	{
 		if (mkdir(directoryPath.c_str(), 0755) == -1)
 		{
-        	std::cerr << "Erreur lors de la création du dossier: " << strerror(errno) << std::endl;
-        	exit(EXIT_FAILURE);
-    	}	
+			std::cerr << "Erreur lors de la création du dossier: " << strerror(errno) << std::endl;
+			exit(EXIT_FAILURE);
+		}
 	}
 	std::string filePath = directoryPath + "postedFile" + extension;
 
@@ -409,4 +423,3 @@ void MasterServer::killConnection(const int &fd)
 	close(fd);
 	removeFd(fd);
 }
-
