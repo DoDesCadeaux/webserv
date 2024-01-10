@@ -285,7 +285,7 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 bool isDirectory(const std::string& path) {
 	struct stat statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
-		return false; // Cannot access path
+		return false;
 	return S_ISDIR(statbuf.st_mode);
 }
 
@@ -294,7 +294,6 @@ std::vector<std::string> getDirectoryContents(const std::string& directoryPath) 
 	DIR* dir = opendir(directoryPath.c_str());
 
 	if (dir == NULL) {
-		// Handle error (e.g., directory does not exist or is not accessible)
 		return contents;
 	}
 
