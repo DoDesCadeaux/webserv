@@ -250,31 +250,65 @@ bool MasterServer::recvAll(const int &fd)
 	return buffer.size();
 }
 
+static bool bodySizeIsValid(Server server, std::string uri, std::string filePath)
+{
+	unsigned int maxBodySize;
+	std::streampos size = 0;
+	// Server server = getServerByClientSocket(fd);
+
+	std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+
+	if (file.is_open())
+	{
+		// tellg() renvoie la position actuelle du pointeur de fichier, qui, dans ce cas, est à la fin du fichier
+		size = file.tellg();
+		file.close();
+	}
+	else
+	{
+		std::cout << "Impossible d'ouvrir le fichier." << std::endl;
+	}
+
+	for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
+	{
+		if (it->path == uri)
+		{
+			if (!it->max_body.empty())
+				maxBodySize = atol(it->max_body.c_str());
+			if (static_cast<unsigned int>(size) > maxBodySize)
+				return false;
+		}
+	}
+	return true;
+}
+
 bool MasterServer::sendAll(const int &fd)
 {
 	std::string content;
 	std::string uri = _clients[fd]->getRequestUri();
 	HttpResponse response;
 
-	std::cout << COL << uri << NOCOL << std::endl;
 	if (_clients[fd]->getRequestProtocol() == "GET")
-	{
 		content = getResourceContent(uri, fd);
-	}
 	else if (_clients[fd]->getRequestProtocol() == "POST")
 	{
-		std::ifstream file(_clients[fd]->getLastFilePath());
-		std::string line;
-		if (file.is_open())
+		if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 		{
-			while (getline(file, line))
+			std::ifstream file(_clients[fd]->getLastFilePath());
+			std::string line;
+			if (file.is_open())
 			{
-				content += line + "\r\n";
+				while (getline(file, line))
+				{
+					content += line + "\r\n";
+				}
+				file.close();
 			}
-			file.close();
+			else
+				std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
 		}
 		else
-			std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+			response.setErrorResponse(401, "Unauthorized");
 	}
 
 	if (content.empty())
@@ -282,14 +316,14 @@ bool MasterServer::sendAll(const int &fd)
 		Server server = getServerByClientSocket(fd);
 		for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
 		{
-			if (it->first == 404)
+			if (it->first == 404 && response.getStatusCode() != 401)
 			{
 				content = getResourceContent(it->second, fd);
 				response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
 				break;
 			}
 		}
-		if (content.empty())
+		if (content.empty() && response.getStatusCode() != 401)
 			response.setErrorResponse(404, "Not Found");
 	}
 	else

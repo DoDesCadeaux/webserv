@@ -39,7 +39,7 @@ void HttpResponse::setErrorResponse(int statuscode, const std::string &statusmes
 	_statuscode = statuscode;
 	_statusmessage = statusmessage;
 
-	std::string body = "<html><body><h1>" + _statusmessage + "</h1></body></html>";
+	std::string body = "<html><body><h1> Error: " + std::to_string(_statuscode) + " " +  _statusmessage + "</h1></body></html>";
 	_response = "HTTP/1.1 " + std::to_string(_statuscode) + " " + _statusmessage + "\r\n" +
 				"Content-Type: text/html\r\n" +
 				"Content-Length: " + std::to_string(body.length()) + "\r\n" +
