@@ -57,9 +57,30 @@
             color: #ffd700;
             text-shadow: 3px 3px 5px #000000;
         }
+
+        .navbar {
+            margin: 20px 0;
+            font-size: 20px;
+        }
+
+        .navbar a {
+            margin: 0 10px;
+            color: #ffd700;
+            text-decoration: none;
+        }
+        .navbar a:hover {
+            color: #ff9900;
+            text-decoration: underline;
+            text-underline: #ff9900;
+            text-underline-position: under;
+        }
     </style>
 </head>
-<body>
+<body style="display: inline; text-align: center">
+<div class="navbar">
+    <a href="form">Post File</a> |
+    <a href="./autoindex/">Autoindex</a>
+</div>
 <div class="container">
     <div class="header">Bienvenue sur notre Serveur Web C++98</div>
     <div class="sub-header">Une création interstellaire</div>
@@ -70,9 +91,6 @@
     <div class="team">
         Conçu et développé par :<br>
         Dorian • Pauline • Tanguy
-    </div>
-    <div class="team">
-        <a href="form" style="color: #ffd700;">Post a File</a>
     </div>
     <div class="footer">
         &copy; 2023 Tous droits réservés

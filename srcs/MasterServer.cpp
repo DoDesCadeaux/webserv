@@ -282,14 +282,14 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 	return true;
 }
 
-bool isDirectory(const std::string& path) {
+static bool isDirectory(const std::string& path) {
 	struct stat statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
 		return false;
 	return S_ISDIR(statbuf.st_mode);
 }
 
-std::vector<std::string> getDirectoryContents(const std::string& directoryPath) {
+static std::vector<std::string> getDirectoryContents(const std::string& directoryPath) {
 	std::vector<std::string> contents;
 	DIR* dir = opendir(directoryPath.c_str());
 
@@ -308,7 +308,7 @@ std::vector<std::string> getDirectoryContents(const std::string& directoryPath) 
 	return contents;
 }
 
-std::string generateDirectoryListing(std::string directoryPath) {
+static std::string generateDirectoryListing(std::string directoryPath) {
 	if (directoryPath.empty() || directoryPath[0] != '/') {
 		directoryPath += "./";
 	}
@@ -329,8 +329,6 @@ std::string generateDirectoryListing(std::string directoryPath) {
 	html += "</ul></body></html>";
 	return html;
 }
-
-
 
 bool MasterServer::sendAll(const int &fd)
 {
