@@ -18,6 +18,8 @@
 #include <string>
 #include <ctime>
 #include <cstdlib>
+#include <sys/stat.h>
+#include <dirent.h>
 
 # define BUFFER_SIZE 1024 //test values under 4
 # define GREEN "\e[32m"

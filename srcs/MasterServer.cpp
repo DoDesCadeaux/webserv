@@ -282,6 +282,57 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 	return true;
 }
 
+bool isDirectory(const std::string& path) {
+	struct stat statbuf;
+	if (stat(path.c_str(), &statbuf) != 0)
+		return false; // Cannot access path
+	return S_ISDIR(statbuf.st_mode);
+}
+
+std::vector<std::string> getDirectoryContents(const std::string& directoryPath) {
+	std::vector<std::string> contents;
+	DIR* dir = opendir(directoryPath.c_str());
+
+	if (dir == NULL) {
+		// Handle error (e.g., directory does not exist or is not accessible)
+		return contents;
+	}
+
+	struct dirent* entry;
+	while ((entry = readdir(dir)) != NULL) {
+		if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+			contents.push_back(entry->d_name);
+		}
+	}
+
+	closedir(dir);
+	return contents;
+}
+
+std::string generateDirectoryListing(std::string directoryPath) {
+	if (directoryPath.empty() || directoryPath[0] != '/') {
+		directoryPath += "./";
+	}
+	std::vector<std::string> contents = getDirectoryContents(directoryPath);
+	std::string html = "<!DOCTYPE html><html><head><title>Index of " + directoryPath + "</title></head><body><h1>Index of " + directoryPath + "</h1><ul><li><a href=\"../\">../</a></li>";
+
+	for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it) {
+		const std::string& item = *it;
+		if (isDirectory(item)) {
+			html += "<li><a href=\"" + item + "/\">" + item + "/</a></li>";
+			html += "<hr>";
+		} else {
+			html += "<li>" + item + "</li>";
+			html += "<hr>";
+		}
+	}
+
+	html += "</ul></body></html>";
+	return html;
+}
+
+
+
 bool MasterServer::sendAll(const int &fd)
 {
 	std::string content;
@@ -310,6 +361,9 @@ bool MasterServer::sendAll(const int &fd)
 		else
 			response.setErrorResponse(401, "Unauthorized");
 	}
+	//Verifier si le autoindex est ON dans le file.conf, on le verifie pas encore
+	if (_clients[fd]->getRequestProtocol() == "GET" && Ft::startsWith(_clients[fd]->getRequestUri(), "/autoindex/"))
+		content += generateDirectoryListing(_clients[fd]->getRequestUri().substr(11));
 
 	if (content.empty())
 	{
