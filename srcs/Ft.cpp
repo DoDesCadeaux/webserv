@@ -48,6 +48,9 @@ void Ft::printLogs(Server &serv, Client &client, std::string type){
 		std::cout << "<< [" << client.getRequestProtocol() << "] target:" << client.getRequestUri() << std::endl;
 	else if (type == RESPONSE)
 		std::cout << ">> [Status: " << client.getResponseStatusCode() << " " << client.getResponseStatusMsg() << "] length:" << client.getResponseLength() << std::endl;
+}
 
-
+bool Ft::startsWith(const std::string &str, const std::string &prefix)
+{
+    return str.substr(0, prefix.size()) == prefix;
 }

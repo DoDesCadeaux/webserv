@@ -1,9 +1,11 @@
 #pragma once
 
 #include "./Server.hpp"
+#include "./Client.hpp"
 #include <list>
 
 class Server;
+class Client;
 
 class MasterServer
 {
@@ -36,16 +38,13 @@ public:
     void run();
     bool recvAll(const int &fd);
     bool sendAll(const int &fd);
-    void saveFile(const int &fd, const std::string &fileData, const std::string &directoryPath, const std::string &mimeType);
-    void saveImage(const std::string& imageData, const std::string& filePath);
+    void saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
 
     void addFd(int fd);
     void newConnection(const int &fd);
     void killConnection(const int &fd);
     void removeFd(int fd);
 
-    //Perdu dans la bataille
-        //saveImage
-        //generateRandomFileName
+    std::string getResourceContent(const std::string &uri, int fd);
 
 };

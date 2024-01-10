@@ -3,20 +3,17 @@
 // CONSTRUCTOR - DESTRUCTOR
 Server::Server()
 {
-	//Quid de l'utilité
-	// FD_ZERO(&_allfds);
-	// FD_ZERO(&_readfds);
-	// FD_ZERO(&_writefds);
-	// _listfds.clear();
-	// _name = "localhost";
+	// Quid de l'utilité
+	// _errorPages.clear();
+	_ports.clear();
 }
 
-Server	&Server::operator=(const Server &other)
+Server &Server::operator=(const Server &other)
 {
 	_ports = other._ports;
 	_name = other._name;
 	_root = other._root;
-    _errorPage = other._errorPage;
+	_errorPages = other._errorPages;
 	_locations = other._locations;
 	// _listfds = other._listfds;
 	// _allfds = other._allfds;
@@ -33,7 +30,6 @@ Server::~Server() {}
 void Server::addClient(const int &fd)
 {
 	_clients.push_back(fd);
-
 }
 
 // GETTER
@@ -47,9 +43,14 @@ std::string &Server::getRoot()
 	return _root;
 }
 
-std::map<std::string, int> &Server::getPorts() 
+std::map<std::string, int> &Server::getPorts()
 {
 	return _ports;
+}
+
+std::map<int, std::string> &Server::getErrorPages()
+{
+	return _errorPages;
 }
 
 std::vector<Location> &Server::getLocations()
@@ -57,11 +58,23 @@ std::vector<Location> &Server::getLocations()
 	return _locations;
 }
 
-std::vector<int> &Server::getClients(){
+std::vector<int> &Server::getClients()
+{
 	return _clients;
 }
 
+Location &Server::getLocationByPath(const std::string &path)
+{
+	for (std::vector<Location>::iterator it = _locations.begin(); it != _locations.end(); it++)
+	{
+		if (it->path == path)
+			return *it;
+	}
+	throw std::runtime_error("Location not found");
+}
+
 // SETTER
-void	Server::setServerName(std::string const &name){
+void Server::setServerName(std::string const &name)
+{
 	_name = name;
 }

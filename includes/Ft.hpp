@@ -21,6 +21,8 @@ class Ft{
 		static bool fileExists(const std::string& filePath);
 		static bool endsWith(const std::string& str, const std::string& suffix);
 		static void printLogs(Server &serv, Client &client, std::string type);
+    	static bool startsWith(const std::string &str, const std::string &prefix);
+
 };
 
 //QUID de la valeur de retour d'erreur

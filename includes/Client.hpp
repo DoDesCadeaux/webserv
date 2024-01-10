@@ -4,8 +4,9 @@
 
 #include <iostream>
 #include <sys/socket.h>
-#include "../includes/Request.hpp"
-#include "../includes/HttpResponse.hpp"
+#include "Request.hpp"
+#include "HttpResponse.hpp"
+
 
 class Client{
 private:

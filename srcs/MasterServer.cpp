@@ -13,7 +13,7 @@ MasterServer::~MasterServer()
 {
 }
 
-MasterServer &MasterServer::operator=(MasterServer const &other)
+MasterServer	&MasterServer::operator=(MasterServer const &other)
 {
 	_ports = other._ports;
 	_listfds = other._listfds;
@@ -26,27 +26,27 @@ MasterServer &MasterServer::operator=(MasterServer const &other)
 }
 
 // Setter
-void MasterServer::setServer(std::vector<Server> &servers)
+void 			MasterServer::setServer(std::vector<Server> &servers)
 {
 	_servers = servers;
 }
 
 // Getter private var
-std::map<std::string, int> &MasterServer::getPorts()
+std::map<std::string, int> 	&MasterServer::getPorts()
 {
 	return _ports;
 }
-std::vector<Server> &MasterServer::getServers()
+std::vector<Server> 		&MasterServer::getServers()
 {
 	return _servers;
 }
-std::map<int, Client *> &MasterServer::getClients()
+std::map<int, Client *> 	&MasterServer::getClients()
 {
 	return _clients;
 }
 
 // General getter
-Server &MasterServer::getServerBySocketPort(int port)
+Server 			&MasterServer::getServerBySocketPort(int port)
 {
 	for (std::vector<Server>::iterator it = getServers().begin(); it != getServers().end(); ++it)
 	{
@@ -58,7 +58,7 @@ Server &MasterServer::getServerBySocketPort(int port)
 	}
 	throw std::runtime_error("Server not found");
 }
-Server &MasterServer::getServerByClientSocket(int fd)
+Server 			&MasterServer::getServerByClientSocket(int fd)
 {
 	for (std::vector<Server>::iterator it = getServers().begin(); it != getServers().end(); ++it)
 	{
@@ -72,16 +72,19 @@ Server &MasterServer::getServerByClientSocket(int fd)
 }
 
 //Statics Utils
-static std::string getResourceContent(const std::string &uri)
+std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 {
-	std::string fullpath = SERVER_ROOT;
+	std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
+	std::string fullpath = getServerByClientSocket(fd).getRoot();
 
+	
 	if (uri == "/" || uri == "/index")
 		fullpath += "/index.html";
-	else if (uri == "/favicon.ico")
-		fullpath += "/favicon.ico";
+	else if (Ft::fileExists(tmp))
+		fullpath = tmp;
 	else
 	{
+		//Quid du autoindex
 		fullpath += uri;
 		if (uri.find('.') == std::string::npos)
 			fullpath += ".html";
@@ -99,37 +102,42 @@ static std::string getResourceContent(const std::string &uri)
 static std::string getExtensionFromMimeType(const std::string &mimeType)
 {
 	if (mimeType.find("image/jpeg") != std::string::npos)
-		return ".jpeg";
-	else if (mimeType.find("image/png") != std::string::npos)
-		return ".png";
-	else if (mimeType.find("image/gif") != std::string::npos)
-		return ".gif";
-	else if (mimeType.find("text/plain") != std::string::npos)
-		return ".txt";
-	else if (mimeType.find("text/html") != std::string::npos)
-		return ".html";
-	else
-		return ".bin";
+       return ".jpeg";
+    else if (mimeType.find("image/png") != std::string::npos)
+       return ".png";
+    else if (mimeType.find("image/jpg") != std::string::npos)
+       return ".jpg";
+    else if (mimeType.find("image/gif") != std::string::npos)
+       return ".gif";
+    else if (mimeType.find("text/plain") != std::string::npos)
+       return ".txt";
+    else if (mimeType.find("text/html") != std::string::npos)
+       return ".html";
+    else if (mimeType.find("application/pdf") != std::string::npos)
+       return ".pdf";
+    else
+       return ".bin";
 }
 
 static std::string getMimeType(const std::string &uri) {
-	if (Ft::endsWith(uri, ".html"))
-		return "text/html";
-	else if (Ft::endsWith(uri, ".ico"))
-		return "image/x-icon";
-	else if (Ft::endsWith(uri, ".jpeg"))
-		return "image/jpeg";
-	else if (Ft::endsWith(uri, ".jpg"))
-		return "image/jpg";
-	else if (Ft::endsWith(uri, ".gif"))
-		return "image/gif";
-	return "text/html";
+    if (Ft::endsWith(uri, ".html"))
+       return "text/html";
+    else if (Ft::endsWith(uri, ".ico"))
+       return "image/x-icon";
+    else if (Ft::endsWith(uri, ".jpeg"))
+       return "image/jpeg";
+    else if (Ft::endsWith(uri, ".jpg"))
+       return "image/jpg";
+    else if (Ft::endsWith(uri, ".png"))
+       return "image/jpg";
+    else if (Ft::endsWith(uri, ".gif"))
+       return "image/gif";
+    else if (Ft::endsWith(uri, ".txt"))
+       return "text/plain";
+	else if (Ft::endsWith(uri, ".pdf"))
+       return "application/pdf";
+    return "text/html";
 }
-
-// static std::string generateRandomFileName(const std::string& extension)
-// {
-
-// }
 
 
 // Methods
@@ -144,6 +152,7 @@ void MasterServer::run()
 		timeout.tv_usec = 0;
 		_readfds = _allfds;
 		_writefds = _allfds;
+
 
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 		if (res == -1)
@@ -174,11 +183,11 @@ void MasterServer::run()
 						if (FD_ISSET(fd, &_readfds))
 						{
 							if (_clients[fd]->getRequestProtocol() == "POST")
-								saveFile(fd, _clients[fd]->getBodyPayload(), "web/", _clients[fd]->getHeaderTypeValue("Content-Type"));
+								saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
 						}
 						else if (FD_ISSET(fd, &_writefds))
 						{
-							if (!sendAll(fd))
+							if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
 							{
 								fdsToRemove.push_back(fd);
 								continue;
@@ -209,12 +218,12 @@ bool MasterServer::recvAll(const int &fd)
 	std::vector<char> buffer;
 	ssize_t bytesRead;
 	char tmp[BUFFER_SIZE];
-
 	while (true)
 	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
-		if (bytesRead > 0)
+		if (bytesRead > 0){
 			buffer.insert(buffer.end(), tmp, tmp + bytesRead);
+		}
 		else
 			break;
 	}
@@ -240,7 +249,7 @@ bool MasterServer::sendAll(const int &fd)
 	HttpResponse response;
 
 	if (_clients[fd]->getRequestProtocol() == "GET")
-		content = getResourceContent(uri);
+		content = getResourceContent(uri, fd);
 	else if (_clients[fd]->getRequestProtocol() == "POST") {
 		std::ifstream file(_clients[fd]->getLastFilePath());
 		std::string line;
@@ -297,9 +306,24 @@ bool MasterServer::sendAll(const int &fd)
 	return (n == -1 ? false : true);
 }
 
-void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &directoryPath, const std::string &mimeType)
+void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
 {
+	// std::string directoryPath = getServerByClientSocket(fd).getLocations();
+	std::string target = _clients[fd]->getRequestUri();
+	Location loc = getServerByClientSocket(fd).getLocationByPath(target);
+
+	std::string directoryPath = !loc.upload.empty() ? loc.upload : "./tmp/";
+
 	std::string extension = getExtensionFromMimeType(mimeType);
+	//Si le directory path existe pas il faut le créer
+	if (!Ft::fileExists(directoryPath))
+	{
+		if (mkdir(directoryPath.c_str(), 0755) == -1)
+		{
+        	std::cerr << "Erreur lors de la création du dossier: " << strerror(errno) << std::endl;
+        	exit(EXIT_FAILURE);
+    	}	
+	}
 	std::string filePath = directoryPath + "postedFile" + extension;
 
 	_clients[fd]->setLastFilePath(filePath);
@@ -320,7 +344,6 @@ void MasterServer::saveFile(const int &fd, const std::string &fileData, const st
 	fileStream.close();
 }
 
-// Methods Utils
 void MasterServer::addFd(int fd)
 {
 	FD_SET(fd, &_allfds);

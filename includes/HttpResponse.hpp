@@ -4,6 +4,12 @@
 #include <string>
 #include <map>
 #include <algorithm>
+#include <iostream>
+
+# define GREEN "\e[32m"
+# define COL "\e[36m"
+# define NOCOL "\e[39m"
+# define RED "\e[91m"
 
 class HttpResponse {
 private:

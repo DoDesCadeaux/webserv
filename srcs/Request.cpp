@@ -21,6 +21,7 @@ Request &Request::operator=(const Request &other) {
 
 void Request::setLine() {
 	ssize_t endl = _requestformat.find('\r');
+
 	_requestline = _requestformat.substr(0, endl);
 }
 

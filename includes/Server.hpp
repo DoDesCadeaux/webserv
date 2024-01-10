@@ -20,8 +20,8 @@
 #include <cstdlib>
 
 # define BUFFER_SIZE 1024 //test values under 4
-# define SERVER_ROOT "web"
 # define GREEN "\e[32m"
+# define COL "\e[36m"
 # define NOCOL "\e[39m"
 # define RED "\e[91m"
 
@@ -38,11 +38,13 @@ struct Location
     std::string root;
     std::string index;
     std::string autoindex;
-    std::map<std::string, std::string> cgi;
-    std::string limit_except;
     std::string auth;
     std::string upload;
-    Location() : path(""), root(""), index(""), autoindex(""), cgi(), limit_except(""), auth(""), upload("")
+	std::string	max_body; ///ATTENTION C'EST UN STRING POUR CAUSE DE FACTORISATION, OENSER A FAIRE LE ATOI AVANT UTILISATION
+	std::vector<std::string> limit_except;
+    std::map<std::string, std::string> cgi;
+
+    Location() : path(""), root(""), index(""), autoindex(""), auth(""), upload(""), max_body(""), limit_except(), cgi()
     {
     }
 };
@@ -50,10 +52,10 @@ struct Location
 class Server
 {
 private:
-	std::map<std::string, int>		_ports;
-	std::string						_name;
 	std::string						_root;
-    std::map<int, std::string>		_errorPage;
+	std::string						_name;
+	std::map<std::string, int>		_ports;
+    std::map<int, std::string>		_errorPages;
 	std::vector<Location> 			_locations;
 	std::vector<int>				_clients;
 
@@ -69,6 +71,8 @@ public:
 	std::string 					&getRoot();
 	std::vector<Location>			&getLocations();
 	std::vector<int>				&getClients();
+	std::map<int, std::string> 		&getErrorPages();
+	Location 						&getLocationByPath(const std::string& path);
 
 	void							setServerName(std::string const &name);
 
