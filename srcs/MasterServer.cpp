@@ -71,15 +71,62 @@ Server &MasterServer::getServerByClientSocket(int fd)
 	throw std::runtime_error("Server not found");
 }
 
+static bool isDirectory(const std::string &path)
+{
+	struct stat statbuf;
+	if (stat(path.c_str(), &statbuf) != 0)
+		return false;
+	return S_ISDIR(statbuf.st_mode);
+}
+
+static std::vector<std::string> getDirectoryContents(const std::string &directoryPath)
+{
+	std::vector<std::string> contents;
+	DIR *dir = opendir(directoryPath.c_str());
+
+	if (dir == NULL)
+	{
+		return contents;
+	}
+
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+		{
+			contents.push_back(entry->d_name);
+		}
+	}
+
+	closedir(dir);
+	return contents;
+}
+
+static std::string generateDirectoryListing(std::string directoryPath)
+{
+	std::vector<std::string> contents = getDirectoryContents(directoryPath);
+	std::string html = "<!DOCTYPE html><html><head><title>Index</title></head><body><h1>Index of " + directoryPath;
+    directoryPath = Ft::startsWith(directoryPath, "./") ? directoryPath.substr(1, std::string::npos) : directoryPath;
+	
+	for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it)
+		html += "<li><a href=" + directoryPath + "/" + *it + ">" + *it + "</a></li><hr> </ul></body></html>";
+
+	return html;
+}
+
 // Statics Utils
 std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 {
+	// std::string tmp = uri;
 	std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
 	std::string fullpath = getServerByClientSocket(fd).getRoot();
 
 	Server server = getServerByClientSocket(fd);
 	for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
 	{
+		if (!it->autoindex.empty() && it->autoindex == "on")
+			if ((it->path == uri || Ft::startsWith(uri, it->path)) && isDirectory(tmp))
+				return generateDirectoryListing(tmp);
 		if (it->path == uri)
 		{
 			if (!it->root.empty())
@@ -88,11 +135,11 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 				tmp = fullpath + "/" + it->index;
 		}
 	}
-	if (Ft::fileExists(tmp))
+	if (Ft::fileExists(tmp)){
 		fullpath = tmp;
+	}
 	else
 	{
-		// Quid du autoindex
 		fullpath += uri;
 		if (uri.find('.') == std::string::npos)
 			fullpath += ".html";
@@ -282,54 +329,6 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 	return true;
 }
 
-static bool isDirectory(const std::string& path) {
-	struct stat statbuf;
-	if (stat(path.c_str(), &statbuf) != 0)
-		return false;
-	return S_ISDIR(statbuf.st_mode);
-}
-
-static std::vector<std::string> getDirectoryContents(const std::string& directoryPath) {
-	std::vector<std::string> contents;
-	DIR* dir = opendir(directoryPath.c_str());
-
-	if (dir == NULL) {
-		return contents;
-	}
-
-	struct dirent* entry;
-	while ((entry = readdir(dir)) != NULL) {
-		if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-			contents.push_back(entry->d_name);
-		}
-	}
-
-	closedir(dir);
-	return contents;
-}
-
-static std::string generateDirectoryListing(std::string directoryPath) {
-	if (directoryPath.empty() || directoryPath[0] != '/') {
-		directoryPath += "./";
-	}
-	std::vector<std::string> contents = getDirectoryContents(directoryPath);
-	std::string html = "<!DOCTYPE html><html><head><title>Index of " + directoryPath.substr(0, directoryPath.find("/./")) + "</title></head><body><h1>Index of " + directoryPath.substr(0, directoryPath.find("/./")) + "</h1><ul><li><a href=\"../\">../</a></li><hr>";
-
-	for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it) {
-		const std::string& item = *it;
-		if (isDirectory(item)) {
-			html += "<li><a href=\"" + item + "/\">" + item + "/</a></li>";
-			html += "<hr>";
-		} else {
-			html += "<li>" + item + "</li>";
-			html += "<hr>";
-		}
-	}
-
-	html += "</ul></body></html>";
-	return html;
-}
-
 bool MasterServer::sendAll(const int &fd)
 {
 	std::string content;
@@ -337,7 +336,9 @@ bool MasterServer::sendAll(const int &fd)
 	HttpResponse response;
 
 	if (_clients[fd]->getRequestProtocol() == "GET")
+	{
 		content = getResourceContent(uri, fd);
+	}
 	else if (_clients[fd]->getRequestProtocol() == "POST")
 	{
 		if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
@@ -347,9 +348,7 @@ bool MasterServer::sendAll(const int &fd)
 			if (file.is_open())
 			{
 				while (getline(file, line))
-				{
 					content += line + "\r\n";
-				}
 				file.close();
 			}
 			else
@@ -358,9 +357,6 @@ bool MasterServer::sendAll(const int &fd)
 		else
 			response.setErrorResponse(401, "Unauthorized");
 	}
-	//Verifier si le autoindex est ON dans le file.conf, on le verifie pas encore
-	if (_clients[fd]->getRequestProtocol() == "GET" && Ft::startsWith(_clients[fd]->getRequestUri(), "/autoindex/"))
-		content += generateDirectoryListing(_clients[fd]->getRequestUri().substr(11));
 
 	if (content.empty())
 	{
@@ -386,8 +382,6 @@ bool MasterServer::sendAll(const int &fd)
 			response.setNormalResponse(302, "Found", content, mimeType, _clients[fd]->getLastFilePath());
 	}
 	_clients[fd]->setClientResponse(response);
-
-	// Faire la fonction de factorisation sur le HttpResponse reponse -> Faire l'operateur d'assignement (HttpResponse & operator=(const  HttpResponse &other))
 
 	unsigned int len = response.getResponse().length();
 	unsigned int total = 0;
