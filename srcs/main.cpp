@@ -12,6 +12,7 @@ int main(int argc, char **argv)
 	// 	return (EXIT_FAILURE);
 
 	MasterServer masterServer = Parsor::parse(fileConf);
+	std::cout << "Le parsing est finni\n";
 
 	masterServer.run();
 }

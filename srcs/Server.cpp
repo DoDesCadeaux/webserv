@@ -73,6 +73,38 @@ Location &Server::getLocationByPath(const std::string &path)
 	throw std::runtime_error("Location not found");
 }
 
+bool Server::isAuthorizedProtocol(std::string path, const std::string &protocol)
+{
+	try
+	{
+		Location location = getLocationByPath(path);
+		std::cout << "Je trouve Le location et tout vas bien avec le path " << path << std::endl;
+
+		for (std::vector<std::string>::iterator it = location.limit_except.begin(); it != location.limit_except.end(); it++)
+		{
+			std::cout << COL << "it->" << *it << std::endl;
+		}
+		std::cout << NOCOL;
+		if (location.limit_except.empty())
+		{
+			std::cout << "Limit est vide\n";
+			return true;
+		}
+		for (std::vector<std::string>::iterator it = location.limit_except.begin(); it != location.limit_except.end(); it++)
+		{
+			std::cout << *it << "avec protocol " << protocol << std::endl;
+			if (protocol == *it)
+				return true;
+		}
+		return false;
+	}
+	catch (const std::exception &e)
+	{
+		std::cout << "J'ai pas trouvé de location\n";
+		return true;
+	}
+}
+
 // SETTER
 void Server::setServerName(std::string const &name)
 {

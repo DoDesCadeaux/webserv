@@ -106,8 +106,8 @@ static std::string generateDirectoryListing(std::string directoryPath)
 {
 	std::vector<std::string> contents = getDirectoryContents(directoryPath);
 	std::string html = "<!DOCTYPE html><html><head><title>Index</title></head><body><h1>Index of " + directoryPath;
-    directoryPath = Ft::startsWith(directoryPath, "./") ? directoryPath.substr(1, std::string::npos) : directoryPath;
-	
+	directoryPath = Ft::startsWith(directoryPath, "./") ? directoryPath.substr(1, std::string::npos) : directoryPath;
+
 	for (std::vector<std::string>::const_iterator it = contents.begin(); it != contents.end(); ++it)
 		html += "<li><a href=" + directoryPath + "/" + *it + ">" + *it + "</a></li><hr> </ul></body></html>";
 
@@ -135,7 +135,8 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 				tmp = fullpath + "/" + it->index;
 		}
 	}
-	if (Ft::fileExists(tmp)){
+	if (Ft::fileExists(tmp))
+	{
 		fullpath = tmp;
 	}
 	else
@@ -234,23 +235,15 @@ void MasterServer::run()
 					}
 					if (FD_ISSET(fd, &_writefds))
 					{
-						if (FD_ISSET(fd, &_readfds))
+						if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
 						{
-							if (_clients[fd]->getRequestProtocol() == "POST")
-								saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+							fdsToRemove.push_back(fd);
+							continue;
 						}
-						else if (FD_ISSET(fd, &_writefds))
-						{
-							if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
-							{
-								fdsToRemove.push_back(fd);
-								continue;
-							}
-							if (!_clients[fd]->isKeepAlive())
-								fdsToRemove.push_back(fd);
-							else
-								_clients[fd]->resetKeepAliveTimer();
-						}
+						if (!_clients[fd]->isKeepAlive())
+							fdsToRemove.push_back(fd);
+						else
+							_clients[fd]->resetKeepAliveTimer();
 					}
 				}
 			}
@@ -335,27 +328,32 @@ bool MasterServer::sendAll(const int &fd)
 	std::string uri = _clients[fd]->getRequestUri();
 	HttpResponse response;
 
-	if (_clients[fd]->getRequestProtocol() == "GET")
+	Server server = getServerByClientSocket(fd);
+	if (!server.isAuthorizedProtocol(uri, _clients[fd]->getRequestProtocol()))
+		response.setErrorResponse(401, "Unauthorized");
+	else
 	{
-		content = getResourceContent(uri, fd);
-	}
-	else if (_clients[fd]->getRequestProtocol() == "POST")
-	{
-		if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
+		if (_clients[fd]->getRequestProtocol() == "GET")
+			content = getResourceContent(uri, fd);
+		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
-			std::ifstream file(_clients[fd]->getLastFilePath());
-			std::string line;
-			if (file.is_open())
+			saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 			{
-				while (getline(file, line))
-					content += line + "\r\n";
-				file.close();
+				std::ifstream file(_clients[fd]->getLastFilePath());
+				std::string line;
+				if (file.is_open())
+				{
+					while (getline(file, line))
+						content += line + "\r\n";
+					file.close();
+				}
+				else
+					std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
 			}
 			else
-				std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+				response.setErrorResponse(401, "Unauthorized");
 		}
-		else
-			response.setErrorResponse(401, "Unauthorized");
 	}
 
 	if (content.empty())

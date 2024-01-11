@@ -42,7 +42,7 @@ struct Location
     std::string autoindex;
     std::string auth;
     std::string upload;
-	std::string	max_body; ///ATTENTION C'EST UN STRING POUR CAUSE DE FACTORISATION, OENSER A FAIRE LE ATOI AVANT UTILISATION
+	std::string	max_body;
 	std::vector<std::string> limit_except;
     std::map<std::string, std::string> cgi;
 
@@ -75,6 +75,7 @@ public:
 	std::vector<int>				&getClients();
 	std::map<int, std::string> 		&getErrorPages();
 	Location 						&getLocationByPath(const std::string& path);
+	bool							isAuthorizedProtocol(std::string path, const std::string &protocol);
 
 	void							setServerName(std::string const &name);
 

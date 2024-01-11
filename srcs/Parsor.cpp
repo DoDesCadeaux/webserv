@@ -421,16 +421,21 @@ MasterServer Parsor::parse(std::string fileName)
                         tmp = removeSemicolon(tmp);
                         if (tmp != "GET" && tmp != "POST" && tmp != "DELETE")
                         {
-                            std::cout << tmp << " -> ";
                             std::cout << "invalid method\n";
                             exit(EXIT_FAILURE);
                         }
-                        for (std::vector<std::string>::iterator it = currentLocation.limit_except.begin(); it != currentLocation.limit_except.end(); i++)
+                        if (currentLocation.limit_except.empty())
+                            currentLocation.limit_except.push_back(tmp);
+                        else
                         {
-                            if (tmp == *it)
+                            for (std::vector<std::string>::iterator it = currentLocation.limit_except.begin(); it != currentLocation.limit_except.end(); it++)
                             {
-                                std::cout << "method already defined\n";
-                                exit(EXIT_FAILURE);
+                                std::cout << "tmp = " << tmp << " Et it->" << *it << std::endl;
+                                if (tmp == *it)
+                                {
+                                    std::cout << "method already defined\n";
+                                    exit(EXIT_FAILURE);
+                                }
                             }
                             currentLocation.limit_except.push_back(tmp);
                         }
