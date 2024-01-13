@@ -29,6 +29,7 @@ SRCS			=	Ft.cpp\
 					Request.cpp\
 					Client.cpp\
 					HttpResponse.cpp\
+					CGI.cpp\
 
 MAIN			=	main.cpp
 
