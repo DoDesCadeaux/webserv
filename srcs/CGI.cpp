@@ -11,11 +11,10 @@ Cgi::Cgi() {}
 
 //Constructor
 Cgi::Cgi(const Request req, int socketFd) {
-	std::cout << "CONSTRUCTOR called\n";
 	this->_req = req;
 	this->_socketFd = socketFd;
 	this->_exec = this->_req.getUri();
-	Cgi::initEnv(req);
+	Cgi::initEnv();
 }
 
 //Copy constructor
@@ -79,7 +78,7 @@ std::string	Cgi::createEnvString(std::string leftString, std::string righString)
 /*
 ** Initialise all the environment variables for the cgi.
 */
-void    Cgi::initEnv(Request req) {
+void    Cgi::initEnv() {
 //exemple de env
 	// env.variables["PATH_INFO"] = path;
     // env.variables["ROOT"] = "/path/to/your/root";
@@ -91,13 +90,15 @@ void    Cgi::initEnv(Request req) {
 //Protocol de Dorian = Method (GET/POST)
 
 	std::cout << "Init ENV\n";
-    this->_envVariables[URI] = createEnvString(URI, req.getUri());
-    this->_envVariables[METHOD] = createEnvString(METHOD, req.getProtocol());
+    this->_envVariables[URI] = createEnvString(URI, this->_req.getUri());
+    this->_envVariables[METHOD] = createEnvString(METHOD, this->_req.getProtocol());
+	this->_envVariables[BODY] = createEnvString(BODY, this->_req.getBodyPayload());
+	this->_envVariables[BODY_LENGTH] = createEnvString(BODY_LENGTH, std::to_string(this->_req.getBodyPayload().size()));
 //this->_envVariables[FORMAT] = createEnvString(FORMAT, req.getFormat());
-//this->_envVariables[BODY] = createEnvString(BODY, this->_req.getBodyPayload());
 //this->_envVariables[HEADER] = createEnvString(HEADER, this->_req.getHeader(???));
 //this->_envVariables[LINE] = createEnvString(LINE, this->_req.getLineRequest());
 	
+	//print for debug
 	std::map<std::string, std::string>::iterator it;
     for (it = _envVariables.end(); it != _envVariables.begin(); --it) {
         std::cout << it->second << std::endl;
@@ -105,6 +106,7 @@ void    Cgi::initEnv(Request req) {
 	
 }
 
+//Pas certain de l'utilité...?
 bool    isCGIRequest(const Request &request) {
     if (request.getUri() == CGI_SCRIPT_PATH) {
         return (true);
@@ -119,73 +121,96 @@ bool    isCGIRequest(const Request &request) {
     return (false);
 }
 
-int     handleCGIRequest(const Request &req, int fd) {
-    pid_t   pid = 0;
-	int 	status = 0;
-	int		in_pipe[2];
+int     Cgi::handleCGIRequest() {
+    int		in_pipe[2];
 	int		out_pipe[2];
+	pid_t   pid = 0;
+	int 	status = 0;
 
-	Cgi cgi(req, fd);
-	char *env[] = {NULL};
+//Finish when initEnv() is debugged
+	char *env[] = {&this->_envVariables[URI][0],
+					&this->_envVariables[METHOD][0],
+					&this->_envVariables[BODY_LENGTH][0],
+					NULL};
 
-	if (pipe(in_pipe) == -1)
-		return (-1);
+	if (pipe(in_pipe) == -1) {
+		perror("pipe");
+		return(-1);
+	}
 	if (pipe(out_pipe) == -1) {
 		close(in_pipe[0]);
 		close(in_pipe[1]);
-		return (-1);
+		perror("pipe");
+		return(-1);
 	}
-
     pid = fork();
-    if (pid == -1)
-        return (-1);
+    if (pid == -1) {
+		perror("pipe");
+		return(-1);
+	}
     // Child process
 	if (!pid) {
-        // Close unnecessary ends of the pipes
         close(in_pipe[1]);
         close(out_pipe[0]);
-		//Redirect stdin and stdout
-		if (::dup2(in_pipe[0], STDIN_FILENO) == -1)
-            return (-1);
+
+		if (dup2(in_pipe[0], STDIN_FILENO) == -1) {
+			perror("dup2");
+			exit(EXIT_FAILURE);
+		}
 		close(in_pipe[0]);
-        if (::dup2(out_pipe[1], STDOUT_FILENO) == -1) {}
-			return (-1);
+        if (dup2(out_pipe[1], STDOUT_FILENO) == -1) {
+			perror("dup2");
+			exit(EXIT_FAILURE);
+		}
         close(out_pipe[1]);
-		//Execute
-		execve(cgi.getExec().c_str(), NULL, env);
+		
+		execve(this->_exec.c_str(), NULL, env);
 		perror("execve");
-		//clear_c_env(env); ???
 		exit(EXIT_FAILURE);
     }
 	// Parent process
     else {
-        int			retPid = 0;
-		int			ret = 0;
-		std::string body = NULL;
-		char		buf[BUFFER_LENGTH];
-		std::string	toRet = NULL;
+        int				retPid = 0;
+		int				ret = 0;
+		char			buf[BUFFER_LENGTH];
+		std::string 	body;
+		std::string		toRet;
 
 		close(in_pipe[0]);
 		close(out_pipe[1]);
-		body = req.getBodyPayload();
+
+		body = this->_req.getBodyPayload();
 		status = write(in_pipe[1], body.c_str(), body.size());
-		if (status < 0)
+		if (status < 0) {
+			perror("write");
 			return(-1);
+		}
 		close(in_pipe[1]);
 		
 		while((ret = read(out_pipe[0], buf, BUFFER_LENGTH))) {
-			if (ret < 0)
-				return -1;
+			if (ret < 0) {
+				perror("read");
+				return(-1);
+			}
 			toRet = buf;
-			status = send(cgi.getSocketFd(), toRet.c_str(), toRet.size(), 0);
+			status = send(this->_socketFd, toRet.c_str(), toRet.size(), 0);
+			if (status < 0) {
+				perror("send");
+				return(-1);
+			}
 		}
 		close(out_pipe[0]);
 		waitpid(pid, &retPid, 0);
 		if (WIFEXITED(retPid) ) {
-			HttpResponse rep;
-			rep.setErrorResponse(500, "");
-			std::string toSend = rep.getResponse();
-			status = send(cgi.getSocketFd(), toSend.c_str(), toSend.size(), 0);
+			HttpResponse response;
+			response.setErrorResponse(500, "Something went wrong with the child process");
+			
+			std::string toSend = response.getResponse();
+			status = send(this->_socketFd, toSend.c_str(), toSend.size(), 0);
+			if (status < 0) {
+				perror("send");
+				return(-1);
+			}
 		}	
     }
     return (status);
