@@ -235,6 +235,10 @@ void MasterServer::run()
 					}
 					if (FD_ISSET(fd, &_writefds))
 					{
+						
+						// #include "CGI.hpp"
+						// Cgi cgi(_clients[fd]->getRequest(), fd);
+
 						if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
 						{
 							fdsToRemove.push_back(fd);
@@ -327,6 +331,8 @@ bool MasterServer::sendAll(const int &fd)
 	std::string content;
 	std::string uri = _clients[fd]->getRequestUri();
 	HttpResponse response;
+
+// Cgi cgi(_clients[fd]->getRequestUri(), fd);
 
 	Server server = getServerByClientSocket(fd);
 	if (!server.isAuthorizedProtocol(uri, _clients[fd]->getRequestProtocol()))

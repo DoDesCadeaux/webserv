@@ -27,17 +27,18 @@ public:
 	const int		&getFdPort() const;
 	const int		&getFd() const;
 
-	const std::string &getRequestLine() const;
-	const std::string &getRequestProtocol() const;
-	const std::string &getRequestUri() const;
-	const std::string &getRequestFormat() const;
-	const std::string &getBodyPayload() const;
-	const std::string &getLastFilePath() const;
-	std::string getHeaderTypeValue(const std::string &headertype) const;
+	const Request		&getRequest() const;
+	const std::string 	&getRequestLine() const;
+	const std::string 	&getRequestProtocol() const;
+	const std::string 	&getRequestUri() const;
+	const std::string 	&getRequestFormat() const;
+	const std::string 	&getBodyPayload() const;
+	const std::string 	&getLastFilePath() const;
+	std::string 		getHeaderTypeValue(const std::string &headertype) const;
 
-	const std::string &getResponse() const;
-	const int		&getResponseStatusCode () const;
-	const std::string &getResponseStatusMsg() const;
+	const std::string	&getResponse() const;
+	const int			&getResponseStatusCode () const;
+	const std::string 	&getResponseStatusMsg() const;
 	const unsigned long &getResponseLength() const;
 
 	void setKeepAlive(bool ka);

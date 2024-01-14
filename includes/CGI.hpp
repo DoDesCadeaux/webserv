@@ -5,12 +5,16 @@
 # include <map>
 # include <iostream>
 # include "Request.hpp"
+# include "HttpResponse.hpp"
+# include <sys/socket.h>
 
 # define CGI_SCRIPT_PATH ""
 # define CGI_UPLOAD_SCRIPT_PATH ""
 
+# define BUFFER_LENGTH 4096
+
 # define LINE "LINE"
-# define PROTOCOL "PROTOCOL"
+# define METHOD "METHOD"
 # define URI "URI"
 # define FORMAT "FORMAT"
 # define BODY "BODY"
@@ -24,11 +28,13 @@ class Cgi {
         std::string								_exec;
         int										_socketFd;
         std::map<std::string, std::string>		_envVariables;
-		void									initEnv();
+
+
+		void									initEnv(Request req);
 		Cgi();
-	
+
 	public:
-		Cgi(Request req, int socketFd);
+		Cgi(const Request req, int socketFd);
 		Cgi(Cgi const &src);
 		Cgi &operator=(Cgi const &rhs);
 		~Cgi();
@@ -39,6 +45,7 @@ class Cgi {
 		int										getSocketFd() const;
 
 		std::string								createEnvString(std::string leftString, std::string rightStrinng);
+		int    handleCGIRequest(const Request &req, int fd);
 };
 
 #endif
