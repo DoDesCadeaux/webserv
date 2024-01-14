@@ -2,6 +2,7 @@
 
 #include "./Server.hpp"
 #include "./Client.hpp"
+#include "./CGI.hpp"
 #include <list>
 
 class Server;
@@ -35,16 +36,17 @@ public:
     Server 						&getServerByClientSocket(int port);
 
     // Methods
-    void run();
-    bool recvAll(const int &fd);
-    bool sendAll(const int &fd);
-    void saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
+    void 						run();
+    bool 						recvAll(const int &fd);
+    bool 						sendAll(const int &fd);
+    void 						saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
 
-    void addFd(int fd);
-    void newConnection(const int &fd);
-    void killConnection(const int &fd);
-    void removeFd(int fd);
+    void 						addFd(int fd);
+    void 						newConnection(const int &fd);
+    void 						killConnection(const int &fd);
+    void 						removeFd(int fd);
 
-    std::string getResourceContent(const std::string &uri, int fd);
+    std::string 				getResourceContent(const std::string &uri, int fd);
 
+	bool						isCgiRequest(const Request &request);
 };

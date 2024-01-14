@@ -235,9 +235,11 @@ void MasterServer::run()
 					}
 					if (FD_ISSET(fd, &_writefds))
 					{
-						
-						// #include "CGI.hpp"
-						// Cgi cgi(_clients[fd]->getRequest(), fd);
+						//CGI
+						if (isCgiRequest(_clients[fd]->getRequest())) {
+							//Cgi::handleCGIRequest(_clients[fd]->getRequest);
+						}
+						///
 
 						if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
 						{
@@ -264,11 +266,27 @@ void MasterServer::run()
 	}
 }
 
+bool    MasterServer::isCgiRequest(const Request &request) {
+    if (request.getUri() == CGI_SCRIPT_PATH) {
+		std::cout << "It's a CGI request (1)\n";
+        return (true);
+    }
+    else if (request.getUri() == CGI_UPLOAD_SCRIPT_PATH /*&& request.getProtocol() == "POST"*/) {
+		std::cout << "It's a CGI request (2)\n";
+        return (true);
+    }
+
+    std::cout << "It's not a CGI request\r\n";
+
+    return (false);
+}
+
 bool MasterServer::recvAll(const int &fd)
 {
-	std::vector<char> buffer;
-	ssize_t bytesRead;
-	char tmp[BUFFER_SIZE];
+	std::vector<char> 	buffer;
+	ssize_t 			bytesRead;
+	char 				tmp[BUFFER_SIZE];
+	
 	while (true)
 	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
@@ -279,7 +297,6 @@ bool MasterServer::recvAll(const int &fd)
 		else
 			break;
 	}
-
 	if (!buffer.empty())
 	{
 		Request request(std::string(buffer.begin(), buffer.end()));
@@ -290,7 +307,6 @@ bool MasterServer::recvAll(const int &fd)
 		else
 			_clients[fd]->setKeepAlive(false);
 	}
-
 	return buffer.size();
 }
 

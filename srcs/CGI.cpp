@@ -106,20 +106,20 @@ void    Cgi::initEnv() {
 	
 }
 
-//Pas certain de l'utilité...?
-bool    isCGIRequest(const Request &request) {
-    if (request.getUri() == CGI_SCRIPT_PATH) {
-        return (true);
-    }
-    else if (request.getUri() == CGI_UPLOAD_SCRIPT_PATH /*&& request.getProtocol() == "POST"*/) {
-        std::cout << "---Form html page---\n";
-        return (true);
-    }
+// bool    isCgiRequest(const Request &request) {
+//     if (request.getUri() == CGI_SCRIPT_PATH) {
+// 		std::cout << "It's a CGI request (1)\n";
+//         return (true);
+//     }
+//     else if (request.getUri() == CGI_UPLOAD_SCRIPT_PATH /*&& request.getProtocol() == "POST"*/) {
+// 		std::cout << "It's a CGI request (2)\n";
+//         return (true);
+//     }
 
-    std::cout << "It's not a CGI request\r\n";
+//     std::cout << "It's not a CGI request\r\n";
 
-    return (false);
-}
+//     return (false);
+// }
 
 int     Cgi::handleCGIRequest() {
     int		in_pipe[2];

@@ -44,6 +44,7 @@ class Cgi {
 		int										getSocketFd() const;
 
 		std::string								createEnvString(std::string leftString, std::string rightStrinng);
+//		bool									isCGIRequest(const Request &request);
 		int    									handleCGIRequest();
 };
 
