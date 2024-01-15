@@ -27,7 +27,7 @@ public:
 	const int		&getFdPort() const;
 	const int		&getFd() const;
 
-	const Request		&getRequest() const;
+	Request		&getRequest();
 	const std::string 	&getRequestLine() const;
 	const std::string 	&getRequestProtocol() const;
 	const std::string 	&getRequestUri() const;

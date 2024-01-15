@@ -9,17 +9,20 @@
 # include <sys/socket.h>
 # include <sys/wait.h>
 
-# define CGI_SCRIPT_PATH ""
-# define CGI_UPLOAD_SCRIPT_PATH ""
+# define CGI_SCRIPT_PATH "/upload"
+# define CGI_UPLOAD_SCRIPT_PATH "upload"
 
 # define BUFFER_LENGTH 4096
 
-# define URI "URI"
-# define METHOD "METHOD"
-# define BODY_LENGTH "BODY_LENGTH"
-# define FORMAT "FORMAT"
-# define BODY "BODY"
-# define HEADER "HEADER"
+# define CONTENT_TYPE "CONTENT_TYPE"
+# define CONTENT_LENGTH "CONTENT_LENGTH"
+# define HTTP_USER_AGENT "HTTP_USER_AGENT"
+# define PATH_INFO "PATH_INFO"
+# define REQUEST_METHOD "REQUEST_METHOD"
+# define SCRIPT_FILENAME "SCRIPT_FILENAME"
+# define SCRIPT_NAME "SCRIPT_NAME"
+# define SERVER_PROTOCOL "SERVER_PROTOCOL"
+# define QUERY_STRING "QUERY_STRING"
 
 class Request;
 

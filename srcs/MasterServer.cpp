@@ -237,9 +237,14 @@ void MasterServer::run()
 					{
 						//CGI
 						if (isCgiRequest(_clients[fd]->getRequest())) {
-							//Cgi::handleCGIRequest(_clients[fd]->getRequest);
-						}
-						///
+						 	Cgi cgi(_clients[fd]->getRequest(), fd); //est-ce bien le socket du bon fd?
+						 	cgi.handleCGIRequest();
+						 }
+						//
+						// 1) Comment vérifier si c'est un CGI? -> Check le URI du localhost nous donne "/espace.jpeg"
+						// 2) Comment le Request est crée?
+						// 3) Pas de bodyPayload car jamais setup dans les request
+						// 4) Vérifier si la fct fait un bon output
 
 						if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
 						{
@@ -267,6 +272,7 @@ void MasterServer::run()
 }
 
 bool    MasterServer::isCgiRequest(const Request &request) {
+   std::cout << "URI = " << request.getUri() << std::endl;
     if (request.getUri() == CGI_SCRIPT_PATH) {
 		std::cout << "It's a CGI request (1)\n";
         return (true);

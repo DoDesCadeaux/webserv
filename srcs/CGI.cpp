@@ -88,22 +88,26 @@ void    Cgi::initEnv() {
     // env.variables["QUERY_STRING"] = "param1=value1&param2=value2";
     // env.variables["REDIRECT_STATUS"] = "200";
 //Protocol de Dorian = Method (GET/POST)
-
-	std::cout << "Init ENV\n";
-    this->_envVariables[URI] = createEnvString(URI, this->_req.getUri());
-    this->_envVariables[METHOD] = createEnvString(METHOD, this->_req.getProtocol());
-	this->_envVariables[BODY] = createEnvString(BODY, this->_req.getBodyPayload());
-	this->_envVariables[BODY_LENGTH] = createEnvString(BODY_LENGTH, std::to_string(this->_req.getBodyPayload().size()));
-//this->_envVariables[FORMAT] = createEnvString(FORMAT, req.getFormat());
-//this->_envVariables[HEADER] = createEnvString(HEADER, this->_req.getHeader(???));
-//this->_envVariables[LINE] = createEnvString(LINE, this->_req.getLineRequest());
 	
+	// this->_envVariables[HTTP_USER_AGENT] = createEnvString(HTTP_USER_AGENT, this->_req.getHeaderFields()[USER_AGENT_FIELD]);
+	// this->_envVariables[CONTENT_TYPE] = createEnvString(CONTENT_TYPE, this->_req.getHeaderFields()[CONTENT_TYPE_FIELD]);
+	// this->_envVariables[QUERY_STRING] = createEnvString(QUERY_STRING, this->_req.getQueryString());
+	this->_envVariables[CONTENT_LENGTH] = createEnvString(CONTENT_LENGTH, std::to_string(this->_req.getBodyPayload().size()));
+	this->_envVariables[CONTENT_TYPE] = createEnvString(CONTENT_TYPE, _req.getBodyPayload());			//bodyPayload est toujours vide à ce stade là...?
+	this->_envVariables[PATH_INFO] = createEnvString(PATH_INFO, this->_req.getUri());
+	this->_envVariables[REQUEST_METHOD] = createEnvString(REQUEST_METHOD, this->_req.getProtocol());	//Protocol de Dorian = Method (GET/POST)
+	this->_envVariables[SCRIPT_FILENAME] = createEnvString(SCRIPT_FILENAME, this->_req.getUri());
+	this->_envVariables[SCRIPT_NAME] = createEnvString(SCRIPT_NAME, this->_req.getUri());
+	this->_envVariables[SERVER_PROTOCOL] = createEnvString(SERVER_PROTOCOL, this->_req.getProtocol());
+
 	//print for debug
+	std::cout << std::endl;
 	std::map<std::string, std::string>::iterator it;
-    for (it = _envVariables.end(); it != _envVariables.begin(); --it) {
+    for (it = _envVariables.begin(); it != _envVariables.end(); ++it) {
         std::cout << it->second << std::endl;
     }
-	
+	std::cout << std::endl;
+	///
 }
 
 // bool    isCgiRequest(const Request &request) {
@@ -115,9 +119,7 @@ void    Cgi::initEnv() {
 // 		std::cout << "It's a CGI request (2)\n";
 //         return (true);
 //     }
-
 //     std::cout << "It's not a CGI request\r\n";
-
 //     return (false);
 // }
 
@@ -127,10 +129,15 @@ int     Cgi::handleCGIRequest() {
 	pid_t   pid = 0;
 	int 	status = 0;
 
-//Finish when initEnv() is debugged
-	char *env[] = {&this->_envVariables[URI][0],
-					&this->_envVariables[METHOD][0],
-					&this->_envVariables[BODY_LENGTH][0],
+	char *env[] = {&this->_envVariables[CONTENT_TYPE][0],
+					&this->_envVariables[CONTENT_LENGTH][0],
+					&this->_envVariables[HTTP_USER_AGENT][0],
+					&this->_envVariables[PATH_INFO][0],
+					&this->_envVariables[REQUEST_METHOD][0],
+					&this->_envVariables[SCRIPT_FILENAME][0],
+					&this->_envVariables[SCRIPT_NAME][0],
+					&this->_envVariables[SERVER_PROTOCOL][0],
+					&this->_envVariables[QUERY_STRING][0],
 					NULL};
 
 	if (pipe(in_pipe) == -1) {

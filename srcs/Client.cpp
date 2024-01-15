@@ -10,7 +10,7 @@ Client::Client(int fd, struct sockaddr_storage addr, bool connect, int fdport) {
 	_lastfilepath = "";
 }
 
-const Request &Client::getRequest() const {
+Request &Client::getRequest() {
 	return _clientrequest;
 }
 
