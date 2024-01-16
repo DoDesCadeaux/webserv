@@ -173,8 +173,6 @@ static std::string getExtensionFromMimeType(const std::string &mimeType)
 		return ".txt";
 	else if (mimeType.find("text/html") != std::string::npos)
 		return ".html";
-	else if (mimeType.find("application/pdf") != std::string::npos)
-		return ".pdf";
 	else
 		return ".bin";
 }
@@ -195,8 +193,6 @@ static std::string getMimeType(const std::string &uri)
 		return "image/gif";
 	else if (Ft::endsWith(uri, ".txt"))
 		return "text/plain";
-	else if (Ft::endsWith(uri, ".pdf"))
-		return "application/pdf";
 	return "text/html";
 }
 
