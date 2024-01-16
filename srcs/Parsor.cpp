@@ -167,6 +167,12 @@ bool alreadySet(std::string &toSave, std::string directive, std::string type, st
 {
     if (!toSave.empty())
     {
+        // if ((directive == "server_name" && toSave != "localhost") || directive != "server_name")
+        // {
+        //     announceError(location, type);
+        //     std::cout << directive << " is already set." << std::endl;
+        //     return false;
+        // }
         announceError(location, type);
         std::cout << directive << " is already set." << std::endl;
         return false;
@@ -204,21 +210,20 @@ bool goodArg(std::string &toSave, std::istringstream &iss, std::string directive
     return true;
 }
 
-bool directiveIsValid(std::string &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
+void directiveIsValid(std::string &toSave, std::istringstream &iss, std::string directive, std::string type, std::string location)
 {
-
     if (directive == "root" || directive == "server_name" || directive == "index" || directive == "autoindex" || directive == "auth" || directive == "upload" || directive == "client_max_body_size")
     {
         if (!alreadySet(toSave, directive, type, location))
-            return false;
+            exit(EXIT_FAILURE);
         if (!goodArg(toSave, iss, directive, type, location))
-            return false;
+            exit(EXIT_FAILURE);
     }
     if (directive == "autoindex" && toSave != "on" && toSave != "off")
     {
         announceError(location, type);
         std::cerr << "autoindex directive must be set to on/off" << std::endl;
-        return false;
+        exit(EXIT_FAILURE);
     }
     if (directive == "root")
     {
@@ -227,11 +232,9 @@ bool directiveIsValid(std::string &toSave, std::istringstream &iss, std::string 
         {
             announceError(location, type);
             std::cout << "invalid root " << toSave << std::endl;
-            return false;
+            exit(EXIT_FAILURE);
         }
     }
-
-    return true;
 }
 
 void setSocket(MasterServer &masterServer, Server &server, std::string port)
@@ -299,13 +302,13 @@ MasterServer Parsor::parse(std::string fileName)
     std::ifstream inputFile(fileName);
 
     if (!inputFile.is_open())
-        exit(Ft::print("Error: failed to open @.", fileName, 1));
+        exit(Ft::print("Error: failed to open @.", fileName, EXIT_FAILURE));
 
     std::string line;
     std::vector<Server> servers;
     Server currentServer;
     Location currentLocation;
-
+    int i = 1;
     while (std::getline(inputFile, line))
     {
         std::istringstream iss(line);
@@ -315,10 +318,10 @@ MasterServer Parsor::parse(std::string fileName)
 
         if (token == "server{")
             currentServer = Server();
-        else if (token == "root" && !directiveIsValid(currentServer.getRoot(), iss, token, SERVER, ""))
-            exit(EXIT_FAILURE);
-        else if (token == "server_name" && !directiveIsValid(currentServer.getServerName(), iss, token, SERVER, ""))
-            exit(EXIT_FAILURE);
+        else if (token == "root")
+            directiveIsValid(currentServer.getRoot(), iss, token, SERVER, "");
+        else if (token == "server_name")
+            directiveIsValid(currentServer.getServerName(), iss, token, SERVER, "");
         else if (token == "listen")
         {
             // Récupérer le port d'écoute
@@ -343,7 +346,6 @@ MasterServer Parsor::parse(std::string fileName)
 
                 for (std::map<std::string, int>::iterator itPort = servPorts.begin(); itPort != servPorts.end(); itPort++)
                 {
-                    std::cout << itPort->first << " : " << itPort->second << std::endl;
                     if (servPorts.find(listenPort) != servPorts.end())
                         exit(Ft::print("Server :Error: port @ is already used by another server", listenPort, EXIT_FAILURE));
                 }
@@ -388,12 +390,12 @@ MasterServer Parsor::parse(std::string fileName)
                 // Ajouter check dans la liste des token directives
                 if (directive == "}")
                     break;
-                else if (directive == "root" && !directiveIsValid(currentLocation.root, locIss, directive, LOCATION, currentLocation.path))
-                    exit(EXIT_FAILURE);
-                else if (directive == "index" && !directiveIsValid(currentLocation.index, locIss, directive, LOCATION, currentLocation.path))
-                    exit(EXIT_FAILURE);
-                else if (directive == "autoindex" && !directiveIsValid(currentLocation.autoindex, locIss, directive, LOCATION, currentLocation.path))
-                    exit(EXIT_FAILURE);
+                else if (directive == "root")
+                    directiveIsValid(currentLocation.root, locIss, directive, LOCATION, currentLocation.path);
+                else if (directive == "index")
+                    directiveIsValid(currentLocation.index, locIss, directive, LOCATION, currentLocation.path);
+                else if (directive == "autoindex")
+                    directiveIsValid(currentLocation.autoindex, locIss, directive, LOCATION, currentLocation.path);
                 else if (directive == "cgi")
                 {
                     std::string param;
@@ -406,12 +408,12 @@ MasterServer Parsor::parse(std::string fileName)
                     }
                     currentLocation.cgi[param] = removeSemicolon(additionalValue);
                 }
-                else if (directive == "auth" && !directiveIsValid(currentLocation.auth, locIss, directive, LOCATION, currentLocation.path))
-                    exit(EXIT_FAILURE);
-                else if (directive == "upload" && !directiveIsValid(currentLocation.upload, locIss, directive, LOCATION, currentLocation.path))
-                    exit(EXIT_FAILURE);
-                else if (directive == "client_max_body_size" && !directiveIsValid(currentLocation.max_body, locIss, directive, LOCATION, currentLocation.path))
-                    exit(EXIT_FAILURE);
+                else if (directive == "auth")
+                    directiveIsValid(currentLocation.auth, locIss, directive, LOCATION, currentLocation.path);
+                else if (directive == "upload")
+                    directiveIsValid(currentLocation.upload, locIss, directive, LOCATION, currentLocation.path);
+                else if (directive == "client_max_body_size")
+                    directiveIsValid(currentLocation.max_body, locIss, directive, LOCATION, currentLocation.path);
                 else if (directive == "limit_except")
                 {
                     std::string tmp;
@@ -430,7 +432,6 @@ MasterServer Parsor::parse(std::string fileName)
                         {
                             for (std::vector<std::string>::iterator it = currentLocation.limit_except.begin(); it != currentLocation.limit_except.end(); it++)
                             {
-                                std::cout << "tmp = " << tmp << " Et it->" << *it << std::endl;
                                 if (tmp == *it)
                                 {
                                     std::cout << "method already defined\n";
@@ -449,21 +450,31 @@ MasterServer Parsor::parse(std::string fileName)
                 }
                 else
                 {
-                    // invalid directive
+                    if (!directive.empty() && !Ft::startsWith(directive, "#"))
+                    {
+                        std::cout << "line:" << i << " Invalid directive : -" << directive << "-" << std::endl;
+                        exit(190);
+                    }
                 }
             }
             currentServer.getLocations().push_back(currentLocation);
         }
         else if (token == "}")
             servers.push_back(currentServer);
+        else
+        {
+            if (!token.empty() && !Ft::startsWith(token, "#"))
+            {
+                std::cout << "line:" << i << " Invalid directive : -" << token << "-" << std::endl;
+                exit(190);
+            }
+        }
+        i++;
     }
 
     // Vérification
     if (servers.empty())
-    {
-        std::cout << "Missing server bloc" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        exit(Ft::print("Error: Missing server bloc.", NULL, EXIT_FAILURE));
 
     for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
     {

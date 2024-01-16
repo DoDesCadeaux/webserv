@@ -38,6 +38,7 @@ void Ft::printLogs(Server &serv, Client &client, std::string type){
 			port = it->first;
 		}
 	}
+
 	std::cout << "[" << serv.getServerName() << ":" << port << ":" << client.getFd() << "] ";
 
 	if (type == CONNEXION)
