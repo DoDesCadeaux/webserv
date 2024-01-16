@@ -55,3 +55,10 @@ bool Ft::startsWith(const std::string &str, const std::string &prefix)
 {
     return str.substr(0, prefix.size()) == prefix;
 }
+
+std::string Ft::to_string(int nb)
+{
+	std::stringstream ss;
+    ss << nb;
+    return ss.str();
+}

@@ -3,7 +3,7 @@
 // CONSTRUCTOR - DESTRUCTOR
 Server::Server()
 {
-	// setServerName("localhost");
+	setServerName("localhost");
 }
 
 Server &Server::operator=(const Server &other)
