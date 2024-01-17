@@ -18,14 +18,14 @@ class Client;
 class Ft{
 	public:
 		template <class T>
-		static int 			printErr(std::string msg, T elem, int err, std::string loc);
+		static int 			printErr(std::string msg, T elem, int err, std::string loc, std::ifstream *file);
 		static void 		printSet(const fd_set &set, const std::string &name);
 		static void 		printClient(const std::map<int, Client *> &clients);
 		static bool 		fileExists(const std::string& filePath);
 		static bool 		endsWith(const std::string& str, const std::string& suffix);
 		static void 		printLogs(Server &serv, Client &client, std::string type);
     	static bool 		startsWith(const std::string &str, const std::string &prefix);
-		static std::string to_string(int nb);
+		static std::string 	to_string(int nb);
 
 };
 
@@ -38,7 +38,7 @@ class Ft{
  *
  */
 template <class T>
-int Ft::printErr(std::string msg, T elem, int err, std::string loc){
+int Ft::printErr(std::string msg, T elem, int err, std::string loc, std::ifstream *file){
 	if (!loc.empty())
 		std::cout << loc << " ";
 	std::cout << RED << "error: " << NOCOL;
@@ -55,6 +55,8 @@ int Ft::printErr(std::string msg, T elem, int err, std::string loc){
 	else
 		std::cout << elem;
 	std::cout << std::endl;
+	if(file)
+		file->close();
 	return err;
 }
 
