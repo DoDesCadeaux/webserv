@@ -22,7 +22,7 @@ Cgi::Cgi(Cgi const &src) {
 	*this = src;
 }
 
-//Override = operator
+//Override operator =
 Cgi &Cgi::operator=(Cgi const &rhs) {
 	if (this != &rhs) {
 		this->_envVariables = rhs.getEnvVariables();
@@ -33,34 +33,18 @@ Cgi &Cgi::operator=(Cgi const &rhs) {
 	return (*this);
 }
 
-/*
-** Getter fot the request field.
-** @return : request : request 
-*/
 Request	 Cgi::getRequest(void) const {
 	return (this->_req);
 }
 
-/*
-** Getter for the executable fields.
-** @return : executable : std::string 
-*/
 std::string	Cgi::getExec(void) const {
 	return (this->_exec);
 }
 
-/*
-** Getter for the environement variables fields.
-** @return : envVariables : std::map<std::string, std::string> 
-*/
 std::map<std::string, std::string>	Cgi::getEnvVariables(void) const {
 	return (this->_envVariables);
 }
 
-/*
-** Getter for the socketFd fields.
-** @return : socketFd : int 
-*/
 int	Cgi::getSocketFd(void) const {
 	return (this->_socketFd);
 }
@@ -76,7 +60,7 @@ std::string	Cgi::createEnvString(std::string leftString, std::string righString)
 }
 
 /*
-** Initialise all the environment variables for the cgi.
+** Initialise all the environment variables for the CGI
 */
 void    Cgi::initEnv() {
 //exemple de env
@@ -201,10 +185,6 @@ int     Cgi::handleCGIRequest() {
 			}
 			toRet = buf;
 			status = send(this->_socketFd, toRet.c_str(), toRet.size(), 0);
-			if (status < 0) {
-				perror("send");
-				return(-1);
-			}
 		}
 		close(out_pipe[0]);
 		waitpid(pid, &retPid, 0);
@@ -214,10 +194,6 @@ int     Cgi::handleCGIRequest() {
 			
 			std::string toSend = response.getResponse();
 			status = send(this->_socketFd, toSend.c_str(), toSend.size(), 0);
-			if (status < 0) {
-				perror("send");
-				return(-1);
-			}
 		}	
     }
     return (status);

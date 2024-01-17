@@ -4,10 +4,12 @@
 # include <unistd.h>
 # include <map>
 # include <iostream>
-# include "Request.hpp"
-# include "HttpResponse.hpp"
 # include <sys/socket.h>
 # include <sys/wait.h>
+
+# include "Request.hpp"
+# include "HttpResponse.hpp"
+# include "MasterServer.hpp"
 
 # define CGI_SCRIPT_PATH "/upload"
 # define CGI_UPLOAD_SCRIPT_PATH "upload"
@@ -49,6 +51,7 @@ class Cgi {
 		std::string								createEnvString(std::string leftString, std::string rightStrinng);
 //		bool									isCGIRequest(const Request &request);
 		int    									handleCGIRequest();
+
 };
 
 #endif

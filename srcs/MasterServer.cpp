@@ -237,8 +237,8 @@ void MasterServer::run()
 					{
 						//CGI
 						if (isCgiRequest(_clients[fd]->getRequest())) {
-						 	Cgi cgi(_clients[fd]->getRequest(), fd); //est-ce bien le socket du bon fd?
-						 	cgi.handleCGIRequest();
+						 	// Cgi cgi(_clients[fd]->getRequest(), fd); //est-ce bien le socket du bon fd?
+						 	// cgi.handleCGIRequest();
 						 }
 						//
 						// 1) Comment vérifier si c'est un CGI? -> Check le URI du localhost nous donne "/espace.jpeg"
