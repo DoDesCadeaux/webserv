@@ -550,10 +550,17 @@ void MasterServer::signalHandler(int signal)
     if (_masterServerPtr)
 	{
         const std::map<int, Client *> &clients = _masterServerPtr->getClients();
-
         for (std::map<int, Client *>::const_iterator it = clients.begin(); it != clients.end(); it++)
+		{
             delete it->second;
-		std::cout << "Bye Bye <3" << std::endl;
+			close(it->first);
+		}
+		std::cout << "iao Bye Bye <3" << std::endl;
+		for (std::map<std::string, int>::iterator it = _masterServerPtr->getPorts().begin(); it != _masterServerPtr->getPorts().end(); it++)
+		{
+			close(it->second);
+			std::cout << "Stop listening on port " << it->first << std::endl;
+		}
         exit(signal);
     }
 }

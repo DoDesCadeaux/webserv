@@ -4,12 +4,10 @@
 int main(int argc, char **argv)
 {
 	if (argc > 2)
-	{
-		return Ft::printErr("too much arguments", NULL, EXIT_FAILURE, "");
-	}
+		return Ft::printErr("too much arguments", NULL, EXIT_FAILURE, "", NULL);
+		
 	std::string fileConf = argv[1] ? argv[1] : "file.conf";
-	if (!Parsor::parseIntegrity(fileConf))
-		return (EXIT_FAILURE);
+	Parsor::parseIntegrity(fileConf);
 
 	MasterServer masterServer = Parsor::parse(fileConf);
 

@@ -32,7 +32,7 @@ class MasterServer;
 class Parsor
 {
 public:
-    static int parseIntegrity(std::string configName);
+    static void parseIntegrity(std::string configName);
     static MasterServer parse(std::string configName);
 };
 
