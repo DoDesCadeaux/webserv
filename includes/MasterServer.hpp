@@ -8,6 +8,7 @@
 class Server;
 class Client;
 
+
 class MasterServer
 {
 private:
@@ -19,6 +20,7 @@ private:
     std::map<int, Client *>		_clients;
     std::vector<Server>			_servers;
     std::map<std::string, int>	_ports;
+    static MasterServer*        _masterServerPtr;
 
 public:
     MasterServer();
@@ -49,4 +51,9 @@ public:
     std::string 				getResourceContent(const std::string &uri, int fd);
 
 	bool						isCgiRequest(const Request &request);
+
+    static void signalHandler(int signal);
+
+    // Fonction pour initialiser le pointeur vers l'instance MasterServer
+    static void initializeMasterServer(MasterServer* masterServerPtr);
 };

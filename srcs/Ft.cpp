@@ -38,6 +38,7 @@ void Ft::printLogs(Server &serv, Client &client, std::string type){
 			port = it->first;
 		}
 	}
+
 	std::cout << "[" << serv.getServerName() << ":" << port << ":" << client.getFd() << "] ";
 
 	if (type == CONNEXION)
@@ -53,4 +54,11 @@ void Ft::printLogs(Server &serv, Client &client, std::string type){
 bool Ft::startsWith(const std::string &str, const std::string &prefix)
 {
     return str.substr(0, prefix.size()) == prefix;
+}
+
+std::string Ft::to_string(int nb)
+{
+	std::stringstream ss;
+    ss << nb;
+    return ss.str();
 }

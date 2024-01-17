@@ -1,5 +1,6 @@
 #include "../includes/MasterServer.hpp"
 
+MasterServer* MasterServer::_masterServerPtr = NULL;
 // Constructeurs - Destructeur
 MasterServer::MasterServer()
 {
@@ -7,6 +8,7 @@ MasterServer::MasterServer()
 	FD_ZERO(&_readfds);
 	FD_ZERO(&_writefds);
 	_listfds.clear();
+
 }
 
 MasterServer::~MasterServer()
@@ -65,7 +67,9 @@ Server &MasterServer::getServerByClientSocket(int fd)
 		for (std::vector<int>::iterator itClient = it->getClients().begin(); itClient != it->getClients().end(); itClient++)
 		{
 			if (*itClient == fd)
+			{
 				return *it;
+			}
 		}
 	}
 	throw std::runtime_error("Server not found");
@@ -169,8 +173,6 @@ static std::string getExtensionFromMimeType(const std::string &mimeType)
 		return ".txt";
 	else if (mimeType.find("text/html") != std::string::npos)
 		return ".html";
-	else if (mimeType.find("application/pdf") != std::string::npos)
-		return ".pdf";
 	else
 		return ".bin";
 }
@@ -191,8 +193,6 @@ static std::string getMimeType(const std::string &uri)
 		return "image/gif";
 	else if (Ft::endsWith(uri, ".txt"))
 		return "text/plain";
-	else if (Ft::endsWith(uri, ".pdf"))
-		return "application/pdf";
 	return "text/html";
 }
 
@@ -297,9 +297,7 @@ bool MasterServer::recvAll(const int &fd)
 	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
 		if (bytesRead > 0)
-		{
 			buffer.insert(buffer.end(), tmp, tmp + bytesRead);
-		}
 		else
 			break;
 	}
@@ -307,6 +305,7 @@ bool MasterServer::recvAll(const int &fd)
 	{
 		Request request(std::string(buffer.begin(), buffer.end()));
 		_clients[fd]->setClientRequest(request);
+		// std::cout << "Dans le recv"
 		Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], REQUEST);
 		if (request.getHeader("Connection") == "keep-alive")
 			_clients[fd]->setKeepAlive(true);
@@ -501,12 +500,12 @@ void MasterServer::newConnection(const int &listen_fd)
 	fcntl(newfd, F_SETFL, O_NONBLOCK);
 	addFd(newfd);
 
-	Server &server = getServerBySocketPort(listen_fd);
+	// Server &server = getServerBySocketPort(listen_fd);
 
 	_clients[newfd] = new Client(newfd, their_addr, true, listen_fd);
-	server.addClient(newfd);
+	getServerBySocketPort(listen_fd).addClient(newfd);
 
-	Ft::printLogs(server, *_clients[newfd], CONNEXION);
+	Ft::printLogs(getServerBySocketPort(listen_fd), *_clients[newfd], CONNEXION);
 	FD_CLR(listen_fd, &_readfds);
 }
 
@@ -527,15 +526,39 @@ void MasterServer::removeFd(int fd)
 
 void MasterServer::killConnection(const int &fd)
 {
-	std::map<int, Client *>::iterator it = _clients.find(fd);
+	std::map<int, Client *>::iterator itMaster = _clients.find(fd);
 
-	if (it != _clients.end())
+	if (itMaster != _clients.end())
 	{
-		Ft::printLogs(getServerByClientSocket(fd), *it->second, DISCONNECT);
-		delete it->second;
+		Ft::printLogs(getServerByClientSocket(fd), *itMaster->second, DISCONNECT);
+		for (std::vector<int>::iterator it = getServerByClientSocket(fd).getClients().begin(); it != getServerByClientSocket(fd).getClients().end(); ++it) {
+        	if (*it == fd) {
+            	getServerByClientSocket(fd).getClients().erase(it);
+            	break;  // Important pour éviter des erreurs après l'effacement
+        	}
+    	}
+		delete itMaster->second;
 		_clients.erase(fd);
 	}
 
-	close(fd);
+	close(fd); 
 	removeFd(fd);
+}
+
+void MasterServer::signalHandler(int signal)
+{
+    if (_masterServerPtr)
+	{
+        const std::map<int, Client *> &clients = _masterServerPtr->getClients();
+
+        for (std::map<int, Client *>::const_iterator it = clients.begin(); it != clients.end(); it++)
+            delete it->second;
+		std::cout << "Bye Bye <3" << std::endl;
+        exit(signal);
+    }
+}
+
+void MasterServer::initializeMasterServer(MasterServer* masterServerPtr)
+{
+    _masterServerPtr = masterServerPtr;
 }
