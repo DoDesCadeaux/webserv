@@ -5,6 +5,7 @@
 #include "Parsor.hpp"
 #include "Request.hpp"
 #include "HttpResponse.hpp"
+#include "cgi.hpp"
 #include <netdb.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -20,6 +21,7 @@
 #include <cstdlib>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <libgen.h>
 
 # define BUFFER_SIZE 1024 //test values under 4
 # define GREEN "\e[32m"

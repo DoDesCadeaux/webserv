@@ -332,26 +332,39 @@ bool MasterServer::sendAll(const int &fd)
 		response.setErrorResponse(401, "Unauthorized");
 	else
 	{
-		if (_clients[fd]->getRequestProtocol() == "GET")
-			content = getResourceContent(uri, fd);
+		if (_clients[fd]->getRequestProtocol() == "GET") {
+			if (Ft::startsWith(_clients[fd]->getRequestUri(), "/cgi-bin/")) {
+				handleCGIRequest(*_clients[fd]);
+				content = _clients[fd]->getResponse();
+				response.setNormalResponse(200, "OK", content, "text/html", _clients[fd]->getLastFilePath());
+			}
+			else {
+				content = getResourceContent(uri, fd);
+			}
+		}
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
-			saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
-			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
-			{
-				std::ifstream file(_clients[fd]->getLastFilePath());
-				std::string line;
-				if (file.is_open())
+			if (Ft::startsWith(_clients[fd]->getRequestUri(), "/cgi-bin/")) {
+				handleCGIRequest(*_clients[fd]);
+			}
+			else {
+				saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+				if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 				{
-					while (getline(file, line))
-						content += line + "\r\n";
-					file.close();
+					std::ifstream file(_clients[fd]->getLastFilePath());
+					std::string line;
+					if (file.is_open())
+					{
+						while (getline(file, line))
+							content += line + "\r\n";
+						file.close();
+					}
+					else
+						std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
 				}
 				else
-					std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+					response.setErrorResponse(401, "Unauthorized");
 			}
-			else
-				response.setErrorResponse(401, "Unauthorized");
 		}
 	}
 
@@ -405,6 +418,81 @@ bool MasterServer::sendAll(const int &fd)
 
 	Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], RESPONSE);
 	return (n == -1 ? false : true);
+}
+
+void MasterServer::handleCGIRequest(Client &client) {
+	int pipefd[2];
+	pid_t pid;
+	char buf;
+	std::size_t pos= client.getRequestUri().find("?");
+	char actualpath [PATH_MAX+1];
+
+	realpath(__FILE__, actualpath);
+
+	std::string baseDirectory = dirname(dirname(actualpath));
+	std::string scriptPath = baseDirectory + "/web" + client.getRequestUri().substr(0, pos);
+
+	if (pipe(pipefd) == -1) {
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
+
+	pid = fork();
+	if (pid == -1) {
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}
+
+	if (pid == 0) {
+		std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
+		std::string queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
+		std::string contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
+		std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
+		char* envp[] = {
+				const_cast<char *>(requestMethod.c_str()),
+				const_cast<char *>(queryString.c_str()),
+				const_cast<char *>(contentLength.c_str()),
+				const_cast<char *>(contentType.c_str()),
+				NULL
+		};
+
+		close(pipefd[0]);
+		dup2(pipefd[1], STDOUT_FILENO);
+		close(pipefd[1]);
+
+		int pipefd_in[2];
+		if (pipe(pipefd_in) == -1) {
+			perror("pipe");
+			exit(EXIT_FAILURE);
+		}
+
+		write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
+		close(pipefd_in[1]);
+		dup2(pipefd_in[0], STDIN_FILENO);
+		close(pipefd_in[0]);
+
+		execve(scriptPath.c_str(), NULL, envp);
+
+		exit(EXIT_FAILURE);
+	}
+	else {
+		close(pipefd[1]);
+
+		std::string output;
+		while (read(pipefd[0], &buf, 1) > 0) {
+			output += buf;
+		}
+
+		std::cout << "Output from CGI script: " << output << std::endl;
+
+
+		close(pipefd[0]);
+		waitpid(pid, NULL, 0);
+
+		HttpResponse response;
+		response.setNormalResponse(200, "OK", output, "text/html", client.getLastFilePath());
+		client.setClientResponse(response);
+	}
 }
 
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
