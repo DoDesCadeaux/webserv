@@ -366,22 +366,43 @@ bool MasterServer::sendAll(const int &fd)
 					response.setErrorResponse(401, "Unauthorized");
 			}
 		}
-	}
+		else if (_clients[fd]->getRequestProtocol() == "DELETE") {
+			std::string resource = _clients[fd]->getRequestUri();
+			std::cout << resource << std::endl;
 
-	if (content.empty())
-	{
-		Server server = getServerByClientSocket(fd);
-		for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
-		{
-			if (it->first == 404 && response.getStatusCode() != 401)
-			{
-				content = getResourceContent(it->second, fd);
-				response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
-				break;
+			// Get the base directory of the application
+			char actualpath [PATH_MAX+1];
+			realpath(__FILE__, actualpath);
+			std::string baseDirectory = dirname(dirname(actualpath));
+
+			// Concatenate the base directory with the resource
+			std::string fullPath = baseDirectory + resource;
+
+			// If the deletion was successful, send a 200 OK response.
+			// Otherwise, send a 404 Not Found or 500 Internal Server Error response.
+			if (deleteResource(fullPath)) {
+				response.setDeleteResponse(200, "OK");
+			} else {
+				response.setDeleteResponse(404, "Not Found");
 			}
 		}
-		if (content.empty() && response.getStatusCode() != 401)
-			response.setErrorResponse(404, "Not Found");
+	}
+	if (content.empty())
+	{
+		if (_clients[fd]->getRequestProtocol() != "DELETE") {
+			Server server = getServerByClientSocket(fd);
+			for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
+			{
+				if (it->first == 404 && response.getStatusCode() != 401)
+				{
+					content = getResourceContent(it->second, fd);
+					response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
+					break;
+				}
+			}
+			if (content.empty() && response.getStatusCode() != 401)
+				response.setErrorResponse(404, "Not Found");
+		}
 	}
 	else
 	{
@@ -493,6 +514,11 @@ void MasterServer::handleCGIRequest(Client &client) {
 		response.setNormalResponse(200, "OK", output, "text/html", client.getLastFilePath());
 		client.setClientResponse(response);
 	}
+}
+
+bool MasterServer::deleteResource(const std::string &resource)
+{
+	return remove(resource.c_str()) == 0;
 }
 
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)

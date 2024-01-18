@@ -4,6 +4,13 @@ HttpResponse::HttpResponse() {}
 
 HttpResponse::~HttpResponse() {}
 
+void HttpResponse::setDeleteResponse(int statusCode, const std::string &statusText)
+{
+	_statuscode = statusCode;
+	_statusmessage = statusText;
+	_response = "HTTP/1.1 " + std::to_string(statusCode) + " " + statusText + "\r\n\r\n";
+}
+
 void HttpResponse::setNormalResponse(int statuscode, const std::string &statusmessage, const std::string &bodycontent, const std::string &mimeType, const std::string &lastfile)
 {
 	_statuscode = statuscode;
@@ -13,8 +20,6 @@ void HttpResponse::setNormalResponse(int statuscode, const std::string &statusme
 	std::map<std::string, std::string> headers;
 
 	if (statuscode == 302) {
-		// std::string lastfileName = lastfile.substr(4);
-		// std::cout << RED << lastfile << std::endl << " apres sub " << lastfileName << NOCOL << std::endl;
 		headers["Location"] = "/" + lastfile;
 	}
 	else {
@@ -30,7 +35,7 @@ void HttpResponse::setNormalResponse(int statuscode, const std::string &statusme
 	{
 		_response += it->first + ": " + it->second + "\r\n";
 	}
-	_response += "\r\n"; // Ajouter une ligne vide entre les en-têtes et le corps de la réponse
+	_response += "\r\n";
 	_response += bodycontent;
 }
 

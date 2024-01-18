@@ -41,13 +41,13 @@ public:
     bool recvAll(const int &fd);
     bool sendAll(const int &fd);
     void saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
+	bool deleteResource(const std::string &resource);
 
 	void handleCGIRequest(Client &client);
-
-    void addFd(int fd);
-    void newConnection(const int &fd);
-    void killConnection(const int &fd);
-    void removeFd(int fd);
+	void addFd(int fd);
+	void newConnection(const int &fd);
+	void killConnection(const int &fd);
+	void removeFd(int fd);
 
     std::string getResourceContent(const std::string &uri, int fd);
 
