@@ -40,7 +40,7 @@ public:
     void run();
     bool recvAll(const int &fd);
     bool sendAll(const int &fd);
-    void saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
+    int saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
 
     void addFd(int fd);
     void newConnection(const int &fd);
