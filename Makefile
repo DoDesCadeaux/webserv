@@ -5,7 +5,8 @@
 
 NAME	= webserv
 CC 		= c++
-CFLAGS	=  -std=c++98 -O3
+# CFLAGS	= -Wall -Wextra -Werror -std=c++98 -O3
+CFLAGS	= -Wall -Wextra -Werror -std=c++98 -O3 -g -fsanitize=address
 DFLAGS	= -MMD -MF $(@:.o=.d)
 AUTHOR	= dduraku pamartin tverdood
 DATE	= dd/mm/yyyy
@@ -24,10 +25,12 @@ INCLUDE_PATH	=	./includes
 
 SRCS			=	Ft.cpp\
 					Parsor.cpp\
+					MasterServer.cpp\
 					Server.cpp\
 					Request.cpp\
 					Client.cpp\
 					HttpResponse.cpp\
+					CGI.cpp\
 
 MAIN			=	main.cpp
 

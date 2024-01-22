@@ -33,11 +33,12 @@ bool Ft::endsWith(const std::string& str, const std::string& suffix) {
 
 void Ft::printLogs(Server &serv, Client &client, std::string type){
 	std::string port;
-	for (std::map<std::string, int>::iterator it = serv.getPorts().begin(); it != serv.getPorts().end(); it++){
+	for (std::map<std::string, int>::const_iterator it = serv.getPorts().begin(); it != serv.getPorts().end(); it++){
 		if (it->second == client.getFdPort()){
 			port = it->first;
 		}
 	}
+
 	std::cout << "[" << serv.getServerName() << ":" << port << ":" << client.getFd() << "] ";
 
 	if (type == CONNEXION)
@@ -48,4 +49,16 @@ void Ft::printLogs(Server &serv, Client &client, std::string type){
 		std::cout << "<< [" << client.getRequestProtocol() << "] target:" << client.getRequestUri() << std::endl;
 	else if (type == RESPONSE)
 		std::cout << ">> [Status: " << client.getResponseStatusCode() << " " << client.getResponseStatusMsg() << "] length:" << client.getResponseLength() << std::endl;
+}
+
+bool Ft::startsWith(const std::string &str, const std::string &prefix)
+{
+    return str.substr(0, prefix.size()) == prefix;
+}
+
+std::string Ft::to_string(int nb)
+{
+	std::stringstream ss;
+    ss << nb;
+    return ss.str();
 }

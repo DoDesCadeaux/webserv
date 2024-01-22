@@ -1,20 +1,18 @@
 #include "../includes/Parsor.hpp"
-#include "../includes/Server.hpp"
-
-using namespace std;
+#include "../includes/MasterServer.hpp"
 
 int main(int argc, char **argv)
 {
 	if (argc > 2)
-		return Ft::print("Error: bad arg", NULL, EXIT_FAILURE);
+		return Ft::printErr("too much arguments", NULL, EXIT_FAILURE, "", NULL);
+		
 	std::string fileConf = argv[1] ? argv[1] : "file.conf";
-	if (!Parsor::parseIntegrity(fileConf))
-		return (EXIT_FAILURE);
+	Parsor::parseIntegrity(fileConf);
 
-	std::vector<Server> servers = Parsor::parse(fileConf);
+	MasterServer masterServer = Parsor::parse(fileConf);
 
-	for (std::vector<Server>::iterator it = servers.begin(); it != servers.end(); ++it)
-	{
-		it->run();
-	}
+	MasterServer::initializeMasterServer(&masterServer);
+
+    signal(SIGINT, MasterServer::signalHandler);
+    masterServer.run();
 }
