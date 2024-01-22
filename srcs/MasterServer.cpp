@@ -377,7 +377,23 @@ bool MasterServer::sendAll(const int &fd)
 			// 		std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
 			// }
 			else
-				response.setErrorResponse(401, "Unauthorized");
+			{
+				if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
+				{
+					std::ifstream file(_clients[fd]->getLastFilePath());
+					std::string line;
+					if (file.is_open())
+					{
+						while (getline(file, line))
+							content += line + "\r\n";
+						file.close();
+					}
+					else
+						std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+				}
+				else
+					response.setErrorResponse(401, "Unauthorized");
+			}
 		}
 	}
 
@@ -448,8 +464,6 @@ bool MasterServer::sendAll(const int &fd)
 	return (n == -1);
 }
 
-
-
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
 {
 	// std::string directoryPath = getServerByClientSocket(fd).getLocations();
@@ -487,7 +501,6 @@ void MasterServer::saveFile(const int &fd, const std::string &fileData, const st
 
 	fileStream.close();
 }
-
 void MasterServer::addFd(int fd)
 {
 	FD_SET(fd, &_allfds);
