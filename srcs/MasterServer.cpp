@@ -293,7 +293,6 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 {
 	unsigned int maxBodySize;
 	std::streampos size = 0;
-	// Server server = getServerByClientSocket(fd);
 
 	std::ifstream file(filePath, std::ios::binary | std::ios::ate);
 
@@ -304,9 +303,7 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 		file.close();
 	}
 	else
-	{
 		std::cout << "Impossible d'ouvrir le fichier." << std::endl;
-	}
 
 	for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
 	{
@@ -319,6 +316,32 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 		}
 	}
 	return true;
+}
+
+ssize_t send(const int &fd, const char *buf, size_t len)
+{
+    size_t total = 0;
+    ssize_t n;
+	int i = 0;
+
+    while (total < len)
+    {
+        n = send(fd, buf + total, len - total, 0);
+        if (n <= 0)
+        {
+			usleep(5000);
+			i++;
+			if (i < 5){
+				continue;
+			}
+			break;
+        }
+        total += n;
+		i = 0;
+
+    }
+
+    return total;
 }
 
 bool MasterServer::sendAll(const int &fd)
@@ -336,20 +359,23 @@ bool MasterServer::sendAll(const int &fd)
 			content = getResourceContent(uri, fd);
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
+
 			saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
 			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 			{
-				std::ifstream file(_clients[fd]->getLastFilePath());
-				std::string line;
-				if (file.is_open())
-				{
-					while (getline(file, line))
-						content += line + "\r\n";
-					file.close();
-				}
-				else
-					std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+				content = getResourceContent(uri, fd);
 			}
+			// 	std::ifstream file(_clients[fd]->getLastFilePath());
+			// 	std::string line;
+			// 	if (file.is_open())
+			// 	{
+			// 		while (getline(file, line))
+			// 			content += line + "\r\n";
+			// 		file.close();
+			// 	}
+			// 	else
+			// 		std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+			// }
 			else
 				response.setErrorResponse(401, "Unauthorized");
 		}
@@ -379,33 +405,50 @@ bool MasterServer::sendAll(const int &fd)
 			response.setNormalResponse(302, "Found", content, mimeType, _clients[fd]->getLastFilePath());
 	}
 	_clients[fd]->setClientResponse(response);
-
-	unsigned int len = response.getResponse().length();
-	unsigned int total = 0;
-	int bytesleft = len;
-	int n;
-	int retries = 0;
+	// unsigned int len = response.getResponse().length();
+	// unsigned int total = 0;
+	// int bytesleft = len;
+	// ssize_t n = 0;
+	// int retries = 0;
 	FD_CLR(fd, &_writefds);
+	
+	// std::cout << "LEN = " << len << std::endl;
 
-	while (total < len)
-	{
-		n = send(fd, response.getResponse().c_str() + total, bytesleft, 0);
-		if (n == -1)
-		{
-			usleep(20000);
-			retries++;
-			if (retries > 5)
-				break;
-			continue;
-		}
-		total += n;
-		bytesleft -= n;
-		retries = 0;
-	}
+	// while (total < len)
+	// {
+	// 	std::cout << "on va faire le send";
+	// 	std::cout << " avec byteleft = " << bytesleft << std::endl;
+	// 	std::cout << response.getResponse() << std::endl;
+	// 	n = send(fd, response.getResponse().c_str(), len, 0);
+	// 	std::cout << "n = " << n << std::endl;
 
+	// 	if (n == -1)
+	// 	{
+	// 		usleep(5000);
+	// 		retries++;
+	// 		if (retries > 5){
+	// 			std::cout << "je break\n";
+	// 			break;
+	// 		}
+	// 		std::cout << "je continue\n";
+	// 		continue;
+	// 	}
+	// 	std::cout << "4\n";
+
+	// 	total += n;
+	// 	std::cout << "total = " << total << "/" << len << std::endl;
+	// 	bytesleft -= n;
+	// 	retries = 0;
+	// }
+	// std::cout << "5\n";
+
+	// Utilisation de sendall pour envoyer toutes les données
+    ssize_t n = send(fd, response.getResponse().c_str(), response.getResponse().length());
 	Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], RESPONSE);
-	return (n == -1 ? false : true);
+	return (n == -1);
 }
+
+
 
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
 {

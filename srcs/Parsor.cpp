@@ -184,7 +184,7 @@ void directiveIsValid(std::string &toSave, std::istringstream &iss, std::string 
     }
 }
 
-void setSocket(MasterServer &masterServer, Server &server, std::string port)
+void setSocket(MasterServer &masterServer, Server &server, std::string port, std::ifstream *file)
 {
     struct addrinfo hint, *servinfo;
     int server_fd;
@@ -196,33 +196,17 @@ void setSocket(MasterServer &masterServer, Server &server, std::string port)
     hint.ai_flags = AI_PASSIVE;
 
     if (getaddrinfo(NULL, port.c_str(), &hint, &servinfo) != 0)
-    {
-        perror("Address Info");
-        exit(EXIT_FAILURE);
-    }
+        exit(Ft::printErr("@.", strerror(errno), EXIT_FAILURE, announceError(), file));
     server_fd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
     if (server_fd == -1)
-    {
-        perror("Socket");
-        exit(EXIT_FAILURE);
-    }
+        exit(Ft::printErr("@.", strerror(errno), EXIT_FAILURE, announceError(), file));
     fcntl(server_fd, F_SETFL, O_NONBLOCK);
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
-    {
-        perror("Setsockopt");
-        exit(EXIT_FAILURE);
-    }
+        exit(Ft::printErr("@.", strerror(errno), EXIT_FAILURE, announceError(), file));
     if (bind(server_fd, servinfo->ai_addr, servinfo->ai_addrlen) < 0)
-    {
-        perror("Bind");
-        std::cout << "with port " << port << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        exit(Ft::printErr("@ with port " + port, strerror(errno), EXIT_FAILURE, announceError(), file));
     if (listen(server_fd, 1000) < 0)
-    {
-        perror("Listen");
-        exit(EXIT_FAILURE);
-    }
+        exit(Ft::printErr("@.", strerror(errno), EXIT_FAILURE, announceError(), file));
     freeaddrinfo(servinfo);
     server.getPorts().insert(std::make_pair(port, server_fd));
     masterServer.addFd(server_fd);
@@ -275,7 +259,7 @@ MasterServer Parsor::parse(std::string fileName)
                     if (servPorts.find(listenPort) != servPorts.end())
                         exit(Ft::printErr("port @ is already used by another server", listenPort, EXIT_FAILURE, announceError(), &inputFile));
             }
-            setSocket(masterServer, currentServer, listenPort);
+            setSocket(masterServer, currentServer, listenPort, &inputFile);
         }
         else if (token == "error_page")
         {

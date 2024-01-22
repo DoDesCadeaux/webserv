@@ -88,7 +88,6 @@ bool Server::isAuthorizedProtocol(std::string path, const std::string &protocol)
 	}
 	catch (const std::exception &e)
 	{
-		std::cout << "J'ai pas trouvé de location\n";
 		return true;
 	}
 }
