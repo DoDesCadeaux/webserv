@@ -399,7 +399,7 @@ bool MasterServer::sendAll(const int &fd)
 	while (total < len)
 	{
 		n = send(fd, response.getResponse().c_str() + total, bytesleft, 0);
-		if (n == -1)
+		if (n <= 0)
 		{
 			usleep(20000);
 			retries++;
