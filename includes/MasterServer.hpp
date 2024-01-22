@@ -38,10 +38,10 @@ public:
     Server 						&getServerByClientSocket(int port);
 
     // Methods
-    void 						run();
-    bool 						recvAll(const int &fd);
-    bool 						sendAll(const int &fd);
-    void 						saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
+    void run();
+    bool recvAll(const int &fd);
+    bool sendAll(const int &fd);
+    int saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
 
     void 						addFd(int fd);
     void 						newConnection(const int &fd);

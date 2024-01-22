@@ -364,22 +364,31 @@ bool MasterServer::sendAll(const int &fd)
 			content = getResourceContent(uri, fd);
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
-			saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
-			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
+			int result = saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+			if (result == 401)
 			{
-				std::ifstream file(_clients[fd]->getLastFilePath());
-				std::string line;
-				if (file.is_open())
-				{
-					while (getline(file, line))
-						content += line + "\r\n";
-					file.close();
-				}
-				else
-					std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+				// Send custom HTML response for 401 error
+				std::string content = "<html><body><h1>401 Unauthorized</h1><p>Your file size exceeds the maximum allowed size of 350 KB.</p></body></html>";
+				response.setNormalResponse(401, "Unauthorized", content, "text/html", "");
 			}
 			else
-				response.setErrorResponse(401, "Unauthorized");
+			{
+				if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
+				{
+					std::ifstream file(_clients[fd]->getLastFilePath());
+					std::string line;
+					if (file.is_open())
+					{
+						while (getline(file, line))
+							content += line + "\r\n";
+						file.close();
+					}
+					else
+						std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+				}
+				else
+					response.setErrorResponse(401, "Unauthorized");
+			}
 		}
 	}
 
@@ -418,7 +427,7 @@ bool MasterServer::sendAll(const int &fd)
 	while (total < len)
 	{
 		n = send(fd, response.getResponse().c_str() + total, bytesleft, 0);
-		if (n == -1)
+		if (n <= 0)
 		{
 			usleep(20000);
 			retries++;
@@ -435,21 +444,29 @@ bool MasterServer::sendAll(const int &fd)
 	return (n == -1 ? false : true);
 }
 
-void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
+int MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
 {
-	// std::string directoryPath = getServerByClientSocket(fd).getLocations();
+	// Maximum allowed size in bytes (350 KB)
+	const size_t MAX_SIZE = 350 * 1024;
+
+	// Check if the size of the file data exceeds the internal server limit
+	if (fileData.size() > MAX_SIZE)
+	{
+		// Return 401 error code
+		return 401;
+	}
+
 	std::string target = _clients[fd]->getRequestUri();
 	Location loc = getServerByClientSocket(fd).getLocationByPath(target);
 
 	std::string directoryPath = !loc.upload.empty() ? loc.upload : "./tmp/";
 
 	std::string extension = getExtensionFromMimeType(mimeType);
-	// Si le directory path existe pas il faut le créer
 	if (!Ft::fileExists(directoryPath))
 	{
 		if (mkdir(directoryPath.c_str(), 0755) == -1)
 		{
-			std::cerr << "Erreur lors de la création du dossier: " << strerror(errno) << std::endl;
+			std::cerr << "Error creating directory: " << strerror(errno) << std::endl;
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -457,20 +474,28 @@ void MasterServer::saveFile(const int &fd, const std::string &fileData, const st
 
 	_clients[fd]->setLastFilePath(filePath);
 
+	// Check if the size of the file data exceeds the limit set in the configuration file
+	if (!bodySizeIsValid(getServerByClientSocket(fd), target, filePath))
+	{
+		// Return 401 error code
+		return 401;
+	}
+
 	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
 
 	if (!fileStream)
 	{
-		std::cerr << "Erreur lors de la création du fichier" << std::endl;
-		return;
+		std::cerr << "Error creating file" << std::endl;
+		return 500;
 	}
 
 	fileStream.write(fileData.c_str(), fileData.size());
 
 	if (!fileStream.good())
-		std::cerr << "Erreur lors de l'écriture dans le fichier" << std::endl;
+		std::cerr << "Error writing to file" << std::endl;
 
 	fileStream.close();
+	return 200;
 }
 
 void MasterServer::addFd(int fd)
