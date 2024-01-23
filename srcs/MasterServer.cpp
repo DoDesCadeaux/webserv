@@ -11,9 +11,7 @@ MasterServer::MasterServer()
 
 }
 
-MasterServer::~MasterServer()
-{
-}
+MasterServer::~MasterServer() {}
 
 MasterServer &MasterServer::operator=(MasterServer const &other)
 {
@@ -25,6 +23,11 @@ MasterServer &MasterServer::operator=(MasterServer const &other)
 	_maxfd = other._maxfd;
 	_clients = other._clients;
 	return (*this);
+}
+
+void MasterServer::initializeMasterServer(MasterServer* masterServerPtr)
+{
+	_masterServerPtr = masterServerPtr;
 }
 
 // Setter
@@ -658,9 +661,4 @@ void MasterServer::signalHandler(int signal)
 		}
         exit(signal);
     }
-}
-
-void MasterServer::initializeMasterServer(MasterServer* masterServerPtr)
-{
-    _masterServerPtr = masterServerPtr;
 }
