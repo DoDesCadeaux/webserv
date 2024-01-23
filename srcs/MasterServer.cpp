@@ -143,9 +143,7 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 		}
 	}
 	if (Ft::fileExists(tmp))
-	{
 		fullpath = tmp;
-	}
 	else
 	{
 		fullpath += uri;

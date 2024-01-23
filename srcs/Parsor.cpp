@@ -184,6 +184,33 @@ void directiveIsValid(std::string &toSave, std::istringstream &iss, std::string 
     }
 }
 
+std::map<std::string,std::string>    directiveCgiIsValid(std::istringstream &iss, std::ifstream *file)
+{
+    std::string tmp, key, value;
+    std::map<std::string, std::string> cgi;
+    int i = 0;
+    (void)cgi;
+    while (iss >> tmp)
+    {
+        if (!removeElement(tmp, ";").empty())
+        {
+            i++;
+            if (i == 1)
+                key = tmp;
+            if (i == 2)
+                value = tmp;
+        }
+    }
+    if (i > 2)
+        exit(Ft::printErr("cgi directive has to have TWO param.", NULL, EXIT_FAILURE, announceError(), file));
+    if (key.empty() || value.empty())
+        exit(Ft::printErr("missing param for cgi directive.", NULL, EXIT_FAILURE, announceError(), file));
+    if (!Ft::startsWith(key, "."))
+        exit(Ft::printErr("first param of cgi directive must be an extension.", NULL, EXIT_FAILURE, announceError(), file));
+    cgi.insert(std::make_pair(key, value));
+    return cgi;
+}
+
 void setSocket(MasterServer &masterServer, Server &server, std::string port, std::ifstream *file)
 {
     struct addrinfo hint, *servinfo;
@@ -316,15 +343,7 @@ MasterServer Parsor::parse(std::string fileName)
                 else if (directive == "autoindex")
                     directiveIsValid(currentLocation.autoindex, locIss, directive, &inputFile);
                 else if (directive == "cgi")
-                {
-                    std::string param;
-                    removeElement(locIss, ";") >> param;
-                    std::string additionalValue = checkNbParam(1, locIss);
-					//Pas sure
-                    if (additionalValue.empty())
-                		exit(Ft::printErr("cgi directive has to have ONE param", NULL, EXIT_FAILURE, announceError(), &inputFile));
-                    currentLocation.cgi[param] = removeElement(additionalValue, ";");
-                }
+                    currentLocation.cgi = directiveCgiIsValid(locIss, &inputFile);
                 else if (directive == "auth")
                     directiveIsValid(currentLocation.auth, locIss, directive, &inputFile);
                 else if (directive == "upload")
