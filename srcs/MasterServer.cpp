@@ -442,78 +442,86 @@ bool MasterServer::sendAll(const int &fd)
 }
 
 void MasterServer::handleCGIRequest(Client &client) {
-	int pipefd[2];
-	pid_t pid;
-	char buf;
-	std::size_t pos= client.getRequestUri().find("?");
-	char actualpath [PATH_MAX+1];
+    int pipefd[2];
+    pid_t pid;
+    char buf;
+    std::size_t pos= client.getRequestUri().find("?");
+    char actualpath [PATH_MAX+1];
 
-	realpath(__FILE__, actualpath);
+    realpath(__FILE__, actualpath);
 
-	std::string baseDirectory = dirname(dirname(actualpath));
-	std::string scriptPath = baseDirectory + "/web" + client.getRequestUri().substr(0, pos);
+    std::string baseDirectory = dirname(dirname(actualpath));
+    std::string scriptPath = baseDirectory + "/web" + client.getRequestUri().substr(0, pos);
 
-	if (pipe(pipefd) == -1) {
-		perror("pipe");
-		exit(EXIT_FAILURE);
-	}
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
 
-	pid = fork();
-	if (pid == -1) {
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
+    pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
 
-	if (pid == 0) {
-		std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
-		std::string queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
-		std::string contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
-		std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
-		char* envp[] = {
-				const_cast<char *>(requestMethod.c_str()),
-				const_cast<char *>(queryString.c_str()),
-				const_cast<char *>(contentLength.c_str()),
-				const_cast<char *>(contentType.c_str()),
-				NULL
-		};
+    if (pid == 0) { // Child process
+        alarm(5); // Set a timer for 5 seconds
+        std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
+        std::string queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
+        std::string contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
+        std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
+        char* envp[] = {
+            const_cast<char *>(requestMethod.c_str()),
+            const_cast<char *>(queryString.c_str()),
+            const_cast<char *>(contentLength.c_str()),
+            const_cast<char *>(contentType.c_str()),
+            NULL
+        };
 
-		close(pipefd[0]);
-		dup2(pipefd[1], STDOUT_FILENO);
-		close(pipefd[1]);
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
 
-		int pipefd_in[2];
-		if (pipe(pipefd_in) == -1) {
-			perror("pipe");
-			exit(EXIT_FAILURE);
-		}
+        int pipefd_in[2];
+        if (pipe(pipefd_in) == -1) {
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
 
-		write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
-		close(pipefd_in[1]);
-		dup2(pipefd_in[0], STDIN_FILENO);
-		close(pipefd_in[0]);
+        write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
+        close(pipefd_in[1]);
+        dup2(pipefd_in[0], STDIN_FILENO);
+        close(pipefd_in[0]);
 
-		execve(scriptPath.c_str(), NULL, envp);
+        execve(scriptPath.c_str(), NULL, envp);
 
-		exit(EXIT_FAILURE);
-	}
-	else {
-		close(pipefd[1]);
+        exit(EXIT_FAILURE);
+    }
+    else { // Parent process
+        close(pipefd[1]);
 
-		std::string output;
-		while (read(pipefd[0], &buf, 1) > 0) {
-			output += buf;
-		}
+        std::string output;
+        while (read(pipefd[0], &buf, 1) > 0) {
+            output += buf;
+        }
 
-		std::cout << "Output from CGI script: " << output << std::endl;
+        int status;
+        waitpid(pid, &status, 0);
 
-
-		close(pipefd[0]);
-		waitpid(pid, NULL, 0);
-
-		HttpResponse response;
-		response.setNormalResponse(200, "OK", output, "text/html", client.getLastFilePath());
-		client.setClientResponse(response);
-	}
+        if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
+            // Handle error: The child process was terminated by a SIGALRM signal
+            // This means the Python CGI script was running for too long (more than 5 seconds)
+            HttpResponse response;
+            response.setNormalResponse(500, "Internal Server Error", "The server encountered an internal error. Probably an INFINITE LOOP", "text/html", client.getLastFilePath());
+            client.setClientResponse(response);
+        }
+        else {
+            std::cout << "Output from CGI script: " << output << std::endl;
+            HttpResponse response;
+            response.setNormalResponse(200, "OK", output, "text/html", client.getLastFilePath());
+            client.setClientResponse(response);
+        }
+    }
 }
 
 bool MasterServer::deleteResource(const std::string &resource)
