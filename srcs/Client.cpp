@@ -8,6 +8,7 @@ Client::Client(int fd, struct sockaddr_storage addr, bool connect, int fdport) {
 	_keepalive = false;
 	_lastactivity = time(NULL);
 	_lastfilepath = "";
+	_cgi = false;
 }
 
 const std::string &Client::getRequestLine() const {
@@ -90,4 +91,8 @@ const std::string &Client::getResponseStatusMsg() const{
 
 const unsigned long &Client::getResponseLength() const {
 	return _clientresponse.getLength();
+}
+
+const std::string &Client::getResponseBody() const {
+	return _clientresponse.getBody();
 }

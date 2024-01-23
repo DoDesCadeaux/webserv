@@ -5,9 +5,6 @@ import urllib.request
 
 
 def main():
-    print("Content-Type: text/html")  # HTTP header
-    print()  # End of headers
-
     arguments = cgi.FieldStorage()
     if "btc" in arguments:
         try:

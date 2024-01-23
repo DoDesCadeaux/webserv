@@ -43,7 +43,7 @@ public:
     void saveFile(const int &fd, const std::string &fileData, const std::string &mimeType);
 	bool deleteResource(const std::string &resource);
 
-	void handleCGIRequest(Client &client);
+	void handleCGIRequest(Client &client, std::string scriptName);
 	void addFd(int fd);
 	void newConnection(const int &fd);
 	void killConnection(const int &fd);

@@ -37,6 +37,7 @@ void HttpResponse::setNormalResponse(int statuscode, const std::string &statusme
 	}
 	_response += "\r\n";
 	_response += bodycontent;
+	_body = bodycontent;
 }
 
 void HttpResponse::setErrorResponse(int statuscode, const std::string &statusmessage)
@@ -44,13 +45,13 @@ void HttpResponse::setErrorResponse(int statuscode, const std::string &statusmes
 	_statuscode = statuscode;
 	_statusmessage = statusmessage;
 
-	std::string body = "<html><body><h1> Error: " + std::to_string(_statuscode) + " " +  _statusmessage + "</h1></body></html>";
+	_body = "<html><body><h1> Error: " + std::to_string(_statuscode) + " " +  _statusmessage + "</h1></body></html>";
 	_response = "HTTP/1.1 " + std::to_string(_statuscode) + " " + _statusmessage + "\r\n" +
 				"Content-Type: text/html\r\n" +
-				"Content-Length: " + std::to_string(body.length()) + "\r\n" +
+				"Content-Length: " + std::to_string(_body.length()) + "\r\n" +
 				"\r\n" +
-				body;
-	_length = body.length();
+				_body;
+	_length = _body.length();
 }
 
 const std::string &HttpResponse::getResponse() const
@@ -61,6 +62,11 @@ const std::string &HttpResponse::getResponse() const
 const std::string &HttpResponse::getStatusMessage() const
 {
 	return _statusmessage;
+}
+
+const std::string &HttpResponse::getBody() const
+{
+	return _body;
 }
 
 const int &HttpResponse::getStatusCode() const

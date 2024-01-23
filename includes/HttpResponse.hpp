@@ -17,6 +17,7 @@ private:
 	unsigned long			_length;
 	std::string				_statusmessage;
 	std::string				_response;
+	std::string				_body;
 
 public:
 	HttpResponse();
@@ -29,6 +30,7 @@ public:
 	const std::string &getResponse() const;
 	const std::string &getStatusMessage() const;
 	const int		&getStatusCode() const;
+	const std::string &getBody() const;
 
 	const unsigned long		&getLength() const;
 };

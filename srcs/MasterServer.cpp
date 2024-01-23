@@ -125,6 +125,7 @@ static std::string generateDirectoryListing(std::string directoryPath)
 std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 {
 	// std::string tmp = uri;
+
 	std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
 	std::string fullpath = getServerByClientSocket(fd).getRoot();
 
@@ -140,6 +141,17 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 				fullpath = it->root;
 			if (!it->index.empty())
 				tmp = fullpath + "/" + it->index;
+		}
+		else if (uri.find(it->path + '?') != std::string::npos)
+		{
+			if (!it->cgi.empty())
+			{
+				if (!it->root.empty())
+					fullpath = it->root;
+				std::map<std::string, std::string>::iterator script = it->cgi.begin();
+				handleCGIRequest(*_clients[fd], fullpath + "/" + script->second);
+				return (_clients[fd]->getResponseBody());
+			}
 		}
 	}
 	if (Ft::fileExists(tmp))
@@ -279,7 +291,6 @@ bool MasterServer::recvAll(const int &fd)
 	{
 		Request request(std::string(buffer.begin(), buffer.end()));
 		_clients[fd]->setClientRequest(request);
-		// std::cout << "Dans le recv"
 		Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], REQUEST);
 		if (request.getHeader("Connection") == "keep-alive")
 			_clients[fd]->setKeepAlive(true);
@@ -345,6 +356,7 @@ ssize_t send(const int &fd, const char *buf, size_t len)
     return total;
 }
 
+
 bool MasterServer::sendAll(const int &fd)
 {
 	std::string content;
@@ -357,43 +369,29 @@ bool MasterServer::sendAll(const int &fd)
 	else
 	{
 		if (_clients[fd]->getRequestProtocol() == "GET") {
-			if (Ft::startsWith(_clients[fd]->getRequestUri(), "/cgi-bin/")) {
-				handleCGIRequest(*_clients[fd]);
-				content = _clients[fd]->getResponse();
-				response.setNormalResponse(200, "OK", content, "text/html", _clients[fd]->getLastFilePath());
-			}
-			else {
-				content = getResourceContent(uri, fd);
-			}
+			content = getResourceContent(uri, fd);
 		}
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
-			if (Ft::startsWith(_clients[fd]->getRequestUri(), "/cgi-bin/")) {
-				handleCGIRequest(*_clients[fd]);
-			}
-			else {
-				saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
-				if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
+			saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
+			{
+				std::ifstream file(_clients[fd]->getLastFilePath());
+				std::string line;
+				if (file.is_open())
 				{
-					std::ifstream file(_clients[fd]->getLastFilePath());
-					std::string line;
-					if (file.is_open())
-					{
-						while (getline(file, line))
-							content += line + "\r\n";
-						file.close();
-					}
-					else
-						std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+					while (getline(file, line))
+						content += line + "\r\n";
+					file.close();
 				}
 				else
-					response.setErrorResponse(401, "Unauthorized");
+					std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
 			}
+			else
+				response.setErrorResponse(401, "Unauthorized");
 		}
 		else if (_clients[fd]->getRequestProtocol() == "DELETE") {
 			std::string resource = _clients[fd]->getRequestUri();
-			std::cout << resource << std::endl;
-
 			// Get the base directory of the application
 			char actualpath [PATH_MAX+1];
 			realpath(__FILE__, actualpath);
@@ -445,31 +443,32 @@ bool MasterServer::sendAll(const int &fd)
 	return (n == -1);
 }
 
-void MasterServer::handleCGIRequest(Client &client) {
+void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
     int pipefd[2];
     pid_t pid;
     char buf;
     std::size_t pos= client.getRequestUri().find("?");
-    char actualpath [PATH_MAX+1];
 
-    realpath(__FILE__, actualpath);
-
-    std::string baseDirectory = dirname(dirname(actualpath));
-    std::string scriptPath = baseDirectory + "/web" + client.getRequestUri().substr(0, pos);
-
+	if (!Ft::fileExists(scriptName))
+	{
+		HttpResponse response;
+        response.setErrorResponse(502, "Bad Gateway");
+        client.setClientResponse(response);
+		std::cout << client.getBodyPayload() << std::endl;
+		return;
+	}
     if (pipe(pipefd) == -1) {
-        perror("pipe");
         exit(EXIT_FAILURE);
     }
 
     pid = fork();
     if (pid == -1) {
-        perror("fork");
         exit(EXIT_FAILURE);
     }
 
     if (pid == 0) { // Child process
         alarm(5); // Set a timer for 5 seconds
+
         std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
         std::string queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
         std::string contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
@@ -488,7 +487,6 @@ void MasterServer::handleCGIRequest(Client &client) {
 
         int pipefd_in[2];
         if (pipe(pipefd_in) == -1) {
-            perror("pipe");
             exit(EXIT_FAILURE);
         }
 
@@ -497,7 +495,7 @@ void MasterServer::handleCGIRequest(Client &client) {
         dup2(pipefd_in[0], STDIN_FILENO);
         close(pipefd_in[0]);
 
-        execve(scriptPath.c_str(), NULL, envp);
+        execve(scriptName.c_str(), NULL, envp);
 
         exit(EXIT_FAILURE);
     }

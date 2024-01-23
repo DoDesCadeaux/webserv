@@ -47,8 +47,12 @@ void Ft::printLogs(Server &serv, Client &client, std::string type){
 		std::cout << RED << DISCONNECT << NOCOL << std::endl;
 	else if (type == REQUEST)
 		std::cout << "<< [" << client.getRequestProtocol() << "] target:" << client.getRequestUri() << std::endl;
-	else if (type == RESPONSE)
-		std::cout << ">> [Status: " << client.getResponseStatusCode() << " " << client.getResponseStatusMsg() << "] length:" << client.getResponseLength() << std::endl;
+	else if (type == RESPONSE){
+		if (client.getRequestProtocol() == "DELETE")
+			std::cout << ">> [Status: " << client.getResponseStatusCode() << " " << client.getResponseStatusMsg() << "]" << std::endl;
+		else
+			std::cout << ">> [Status: " << client.getResponseStatusCode() << " " << client.getResponseStatusMsg() << "] length:" << client.getResponseLength() << std::endl;
+	}
 }
 
 bool Ft::startsWith(const std::string &str, const std::string &prefix)

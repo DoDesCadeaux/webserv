@@ -18,6 +18,7 @@ private:
 	time_t					_lastactivity;
 	HttpResponse			_clientresponse;
 	std::string 			_lastfilepath;
+	bool					_cgi;
 
 public:
 	Client(int fd, struct sockaddr_storage addr, bool connect, int fdport);
@@ -37,6 +38,8 @@ public:
 	const std::string &getResponse() const;
 	const int		&getResponseStatusCode () const;
 	const std::string &getResponseStatusMsg() const;
+	const std::string &getResponseBody() const;
+
 	const unsigned long &getResponseLength() const;
 
 	void setKeepAlive(bool ka);
