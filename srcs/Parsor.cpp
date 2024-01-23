@@ -224,10 +224,12 @@ std::string getPath(std::istringstream &iss, std::ifstream *inputFile)
             vectorLoc.push_back(tmp);
     }
     std::vector<std::string>::iterator first = vectorLoc.begin();
-    if (Ft::startsWith(*first, "~") || Ft::startsWith(*first, "@") || Ft::startsWith(*first, "="))
+    if (Ft::startsWith(*first, "~") || Ft::startsWith(*first, "@") || Ft::startsWith(*first, "=") || Ft::startsWith(*first, "*") )
         exit(Ft::printErr("location wilcard not accepted.", NULL, EXIT_FAILURE, announceError(), inputFile));
+    if (!Ft::startsWith(*first, "/"))
+        exit(Ft::printErr("location path must start with '/'.", NULL, EXIT_FAILURE, announceError(), inputFile));
     if (vectorLoc.size() != 1)
-        exit(Ft::printErr("location directive has to have ONE param", NULL, EXIT_FAILURE, announceError(), inputFile));
+        exit(Ft::printErr("location directive has to have ONE param.", NULL, EXIT_FAILURE, announceError(), inputFile));
     return *first;
 }
 
