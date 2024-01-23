@@ -71,7 +71,7 @@
         color: #ffd700;
         text-shadow: 3px 3px 5px #000000;
       }
-      .warning {
+      .warningFormat, .warningSize {
         color: red;
       }
       .displayNone {
@@ -92,9 +92,11 @@
           name="submit"
           class="submit displayNone"
         />
-        <div class="warning displayNone">
-          Seulement les extensions suivantes sont acceptées (.jpeg, .png, .jpg,
-          .gif, .txt, .html et .bin)
+        <div class="warningFormat displayNone">
+          Seulement les extensions suivantes sont acceptées (.jpeg, .jpg, .txt et .html)
+        </div>
+        <div class="warningSize displayNone">
+          Choisit un fichier moins lourd s'il te plait
         </div>
       </form>
       <a href="/" class="home">Go back home</a>
@@ -107,25 +109,33 @@
     <script>
       function recupererFichier() {
         var file = document.getElementById("fichierImage").files[0];
-        var warning = document.querySelector(".warning");
+        var warningFormat = document.querySelector(".warningFormat");
+        var warningSize = document.querySelector(".warningSize");
         var submit = document.querySelector(".submit");
+        var fileSize = file.size;
 
         var formatsAuthorize = [
           "image/jpeg",
-          "image/png",
           "image/jpg",
-          "image/gif",
           "text/plain",
           "text/html",
-          "application/macbinary",
         ];
 
+
+        
         if (formatsAuthorize.includes(file.type)) {
-          submit.className.includes("displayNone") ? submit.classList.remove("displayNone") : "";
-          warning.className.includes("displayNone") ? "" : warning.classList.add("displayNone");
+            submit.className.includes("displayNone") ? submit.classList.remove("displayNone") : "";
+            warningFormat.className.includes("displayNone") ? "" : warningFormat.classList.add("displayNone");
         } else {
           submit.className.includes("displayNone") ? "" : submit.classList.add("displayNone");
-          warning.className.includes("displayNone") ? warning.classList.remove("displayNone") : "";
+          warningFormat.className.includes("displayNone") ? warningFormat.classList.remove("displayNone") : "";
+        }
+        if (file.size < 400000){
+          submit.className.includes("displayNone") ? submit.classList.remove("displayNone") : "";
+          warningSize.className.includes("displayNone") ? "" : warningSize.classList.add("displayNone");
+        } else {
+          submit.className.includes("displayNone") ? "" : submit.classList.add("displayNone");
+          warningSize.className.includes("displayNone") ? warningSize.classList.remove("displayNone") : "";
         }
       }
       document.getElementById("fichierImage").addEventListener("change", recupererFichier);
