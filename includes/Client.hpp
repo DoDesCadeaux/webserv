@@ -7,7 +7,6 @@
 #include "Request.hpp"
 #include "HttpResponse.hpp"
 
-
 class Client{
 private:
 	int						_fd;
@@ -33,7 +32,7 @@ public:
 	const std::string &getRequestFormat() const;
 	const std::string &getBodyPayload() const;
 	const std::string &getLastFilePath() const;
-	std::string getHeaderTypeValue(const std::string &headertype) const;
+	std::string 	getHeaderTypeValue(const std::string &headertype) const;
 
 	const std::string &getResponse() const;
 	const int		&getResponseStatusCode () const;

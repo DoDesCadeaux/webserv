@@ -91,4 +91,3 @@ const std::string &Client::getResponseStatusMsg() const{
 const unsigned long &Client::getResponseLength() const {
 	return _clientresponse.getLength();
 }
-

@@ -5,7 +5,6 @@
 #include "Parsor.hpp"
 #include "Request.hpp"
 #include "HttpResponse.hpp"
-#include "cgi.hpp"
 #include <netdb.h>
 #include <fcntl.h>
 #include <unistd.h>

@@ -112,8 +112,6 @@ void Request::setPostRequest() {
 	}
 }
 
-
-
 void Request::setPayload(const std::string &payload) {
 	_requestbody = payload;
 }
