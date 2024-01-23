@@ -18,7 +18,7 @@ std::string removeElement(std::string &input, std::string elementsToRemove)
 {
     for (std::string::iterator it = elementsToRemove.begin(); it != elementsToRemove.end(); it++)
     {
-        size_t pos = input.find(*it);
+        size_t pos = input.rfind(*it);
         if (pos != std::string::npos)
         {
             input = input.substr(0, pos);
@@ -214,6 +214,22 @@ void setSocket(MasterServer &masterServer, Server &server, std::string port, std
     std::cout << "Listening on port " << port << std::endl;
 }
 
+std::string getPath(std::istringstream &iss, std::ifstream *inputFile)
+{
+    std::vector<std::string> vectorLoc;
+    std::string tmp;
+    while (iss >> tmp)
+    {
+        if (!removeElement(tmp, "{").empty())
+            vectorLoc.push_back(tmp);
+    }
+    std::vector<std::string>::iterator first = vectorLoc.begin();
+    if (Ft::startsWith(*first, "~") || Ft::startsWith(*first, "@") || Ft::startsWith(*first, "="))
+        exit(Ft::printErr("location wilcard not accepted.", NULL, EXIT_FAILURE, announceError(), inputFile));
+    if (vectorLoc.size() != 1)
+        exit(Ft::printErr("location directive has to have ONE param", NULL, EXIT_FAILURE, announceError(), inputFile));
+    return *first;
+}
 
 MasterServer Parsor::parse(std::string fileName)
 {
@@ -281,7 +297,7 @@ MasterServer Parsor::parse(std::string fileName)
         else if (token == "location")
         {
             currentLocation = Location();
-            removeElement(iss, "{") >> currentLocation.path;
+            currentLocation.path = getPath(iss, &inputFile);
 
             std::string directive;
             while (std::getline(inputFile, line))
