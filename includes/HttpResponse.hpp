@@ -24,6 +24,7 @@ public:
 
 	void	setNormalResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent, const std::string &mimeType, const std::string &lastfile);
 	void	setErrorResponse(int statuscode, const std::string &statusmessage);
+	void	setDeleteResponse(int statusCode, const std::string &statusText);
 
 	const std::string &getResponse() const;
 	const std::string &getStatusMessage() const;

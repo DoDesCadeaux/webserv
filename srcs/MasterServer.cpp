@@ -355,29 +355,23 @@ bool MasterServer::sendAll(const int &fd)
 		response.setErrorResponse(401, "Unauthorized");
 	else
 	{
-		if (_clients[fd]->getRequestProtocol() == "GET")
-			content = getResourceContent(uri, fd);
-		else if (_clients[fd]->getRequestProtocol() == "POST")
-		{
-
-			saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
-			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
-			{
+		if (_clients[fd]->getRequestProtocol() == "GET") {
+			if (Ft::startsWith(_clients[fd]->getRequestUri(), "/cgi-bin/")) {
+				handleCGIRequest(*_clients[fd]);
+				content = _clients[fd]->getResponse();
+				response.setNormalResponse(200, "OK", content, "text/html", _clients[fd]->getLastFilePath());
+			}
+			else {
 				content = getResourceContent(uri, fd);
 			}
-			// 	std::ifstream file(_clients[fd]->getLastFilePath());
-			// 	std::string line;
-			// 	if (file.is_open())
-			// 	{
-			// 		while (getline(file, line))
-			// 			content += line + "\r\n";
-			// 		file.close();
-			// 	}
-			// 	else
-			// 		std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
-			// }
-			else
-			{
+		}
+		else if (_clients[fd]->getRequestProtocol() == "POST")
+		{
+			if (Ft::startsWith(_clients[fd]->getRequestUri(), "/cgi-bin/")) {
+				handleCGIRequest(*_clients[fd]);
+			}
+			else {
+				saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
 				if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 				{
 					std::ifstream file(_clients[fd]->getLastFilePath());
@@ -395,22 +389,43 @@ bool MasterServer::sendAll(const int &fd)
 					response.setErrorResponse(401, "Unauthorized");
 			}
 		}
-	}
+		else if (_clients[fd]->getRequestProtocol() == "DELETE") {
+			std::string resource = _clients[fd]->getRequestUri();
+			std::cout << resource << std::endl;
 
-	if (content.empty())
-	{
-		Server server = getServerByClientSocket(fd);
-		for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
-		{
-			if (it->first == 404 && response.getStatusCode() != 401)
-			{
-				content = getResourceContent(it->second, fd);
-				response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
-				break;
+			// Get the base directory of the application
+			char actualpath [PATH_MAX+1];
+			realpath(__FILE__, actualpath);
+			std::string baseDirectory = dirname(dirname(actualpath));
+
+			// Concatenate the base directory with the resource
+			std::string fullPath = baseDirectory + resource;
+
+			// If the deletion was successful, send a 200 OK response.
+			// Otherwise, send a 404 Not Found or 500 Internal Server Error response.
+			if (deleteResource(fullPath)) {
+				response.setDeleteResponse(200, "OK");
+			} else {
+				response.setDeleteResponse(404, "Not Found");
 			}
 		}
-		if (content.empty() && response.getStatusCode() != 401)
-			response.setErrorResponse(404, "Not Found");
+	}
+	if (content.empty())
+	{
+		if (_clients[fd]->getRequestProtocol() != "DELETE") {
+			Server server = getServerByClientSocket(fd);
+			for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
+			{
+				if (it->first == 404 && response.getStatusCode() != 401)
+				{
+					content = getResourceContent(it->second, fd);
+					response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
+					break;
+				}
+			}
+			if (content.empty() && response.getStatusCode() != 401)
+				response.setErrorResponse(404, "Not Found");
+		}
 	}
 	else
 	{
@@ -421,47 +436,99 @@ bool MasterServer::sendAll(const int &fd)
 			response.setNormalResponse(302, "Found", content, mimeType, _clients[fd]->getLastFilePath());
 	}
 	_clients[fd]->setClientResponse(response);
-	// unsigned int len = response.getResponse().length();
-	// unsigned int total = 0;
-	// int bytesleft = len;
-	// ssize_t n = 0;
-	// int retries = 0;
 	FD_CLR(fd, &_writefds);
-	
-	// std::cout << "LEN = " << len << std::endl;
-
-	// while (total < len)
-	// {
-	// 	std::cout << "on va faire le send";
-	// 	std::cout << " avec byteleft = " << bytesleft << std::endl;
-	// 	std::cout << response.getResponse() << std::endl;
-	// 	n = send(fd, response.getResponse().c_str(), len, 0);
-	// 	std::cout << "n = " << n << std::endl;
-
-	// 	if (n == -1)
-	// 	{
-	// 		usleep(5000);
-	// 		retries++;
-	// 		if (retries > 5){
-	// 			std::cout << "je break\n";
-	// 			break;
-	// 		}
-	// 		std::cout << "je continue\n";
-	// 		continue;
-	// 	}
-	// 	std::cout << "4\n";
-
-	// 	total += n;
-	// 	std::cout << "total = " << total << "/" << len << std::endl;
-	// 	bytesleft -= n;
-	// 	retries = 0;
-	// }
-	// std::cout << "5\n";
 
 	// Utilisation de sendall pour envoyer toutes les données
     ssize_t n = send(fd, response.getResponse().c_str(), response.getResponse().length());
 	Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], RESPONSE);
 	return (n == -1);
+}
+
+void MasterServer::handleCGIRequest(Client &client) {
+    int pipefd[2];
+    pid_t pid;
+    char buf;
+    std::size_t pos= client.getRequestUri().find("?");
+    char actualpath [PATH_MAX+1];
+
+    realpath(__FILE__, actualpath);
+
+    std::string baseDirectory = dirname(dirname(actualpath));
+    std::string scriptPath = baseDirectory + "/web" + client.getRequestUri().substr(0, pos);
+
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+
+    pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid == 0) { // Child process
+        alarm(5); // Set a timer for 5 seconds
+        std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
+        std::string queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
+        std::string contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
+        std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
+        char* envp[] = {
+            const_cast<char *>(requestMethod.c_str()),
+            const_cast<char *>(queryString.c_str()),
+            const_cast<char *>(contentLength.c_str()),
+            const_cast<char *>(contentType.c_str()),
+            NULL
+        };
+
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
+
+        int pipefd_in[2];
+        if (pipe(pipefd_in) == -1) {
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
+
+        write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
+        close(pipefd_in[1]);
+        dup2(pipefd_in[0], STDIN_FILENO);
+        close(pipefd_in[0]);
+
+        execve(scriptPath.c_str(), NULL, envp);
+
+        exit(EXIT_FAILURE);
+    }
+    else { // Parent process
+        close(pipefd[1]);
+
+        std::string output;
+        while (read(pipefd[0], &buf, 1) > 0) {
+            output += buf;
+        }
+
+        int status;
+        waitpid(pid, &status, 0);
+
+        if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
+            // Handle error: The child process was terminated by a SIGALRM signal
+            // This means the Python CGI script was running for too long (more than 5 seconds)
+            HttpResponse response;
+            response.setNormalResponse(500, "Internal Server Error", "The server encountered an internal error. Probably an INFINITE LOOP", "text/html", client.getLastFilePath());
+            client.setClientResponse(response);
+        }
+        else {
+            HttpResponse response;
+            response.setNormalResponse(200, "OK", output, "text/html", client.getLastFilePath());
+            client.setClientResponse(response);
+        }
+    }
+}
+
+bool MasterServer::deleteResource(const std::string &resource)
+{
+	return remove(resource.c_str()) == 0;
 }
 
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
