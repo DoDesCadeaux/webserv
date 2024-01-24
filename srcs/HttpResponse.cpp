@@ -1,6 +1,8 @@
 #include "../includes/HttpResponse.hpp"
 
-HttpResponse::HttpResponse() {}
+HttpResponse::HttpResponse() {
+	_statuscode = 0;
+}
 
 HttpResponse::~HttpResponse() {}
 

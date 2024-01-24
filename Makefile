@@ -5,7 +5,7 @@
 
 NAME	= webserv
 CC 		= c++
-CFLAGS	= -Wall -Wextra -Werror -std=c++98 -O3
+CFLAGS	= -Wall -Wextra -Werror -std=c++98 -O3 -g
 # CFLAGS	= -Wall -Wextra -Werror -std=c++98 -O3 -g -fsanitize=address
 DFLAGS	= -MMD -MF $(@:.o=.d)
 AUTHOR	= dduraku pamartin tverdood

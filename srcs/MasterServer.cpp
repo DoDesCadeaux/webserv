@@ -124,8 +124,6 @@ static std::string generateDirectoryListing(std::string directoryPath)
 // Statics Utils
 std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 {
-	// std::string tmp = uri;
-
 	std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
 	std::string fullpath = getServerByClientSocket(fd).getRoot();
 
@@ -359,9 +357,9 @@ ssize_t send(const int &fd, const char *buf, size_t len)
 
 bool MasterServer::sendAll(const int &fd)
 {
-	std::string content;
-	std::string uri = _clients[fd]->getRequestUri();
-	HttpResponse response;
+	std::string 	content = "";
+	std::string 	uri = _clients[fd]->getRequestUri();
+	HttpResponse 	response;
 
 	Server server = getServerByClientSocket(fd);
 	if (!server.isAuthorizedProtocol(uri, _clients[fd]->getRequestProtocol()))
@@ -444,9 +442,9 @@ bool MasterServer::sendAll(const int &fd)
 }
 
 void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
-    int pipefd[2];
-    pid_t pid;
-    char buf;
+    int 		pipefd[2];
+    pid_t 		pid;
+    char 		buf;
     std::size_t pos= client.getRequestUri().find("?");
 
 	if (!Ft::fileExists(scriptName))
@@ -480,6 +478,10 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
             const_cast<char *>(contentType.c_str()),
             NULL
         };
+		char* const argv[] = {
+			const_cast<char*>(scriptName.c_str()),
+			NULL
+		};
 
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
@@ -495,7 +497,7 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
         dup2(pipefd_in[0], STDIN_FILENO);
         close(pipefd_in[0]);
 
-        execve(scriptName.c_str(), NULL, envp);
+        execve(scriptName.c_str(), const_cast<char* const*>(argv), envp);
 
         exit(EXIT_FAILURE);
     }
@@ -639,22 +641,22 @@ void MasterServer::killConnection(const int &fd)
 	removeFd(fd);
 }
 
-void MasterServer::signalHandler(int signal)
-{
-    if (_masterServerPtr)
-	{
-        const std::map<int, Client *> &clients = _masterServerPtr->getClients();
-        for (std::map<int, Client *>::const_iterator it = clients.begin(); it != clients.end(); it++)
-		{
-            delete it->second;
-			close(it->first);
-		}
-		std::cout << "iao Bye Bye <3" << std::endl;
-		for (std::map<std::string, int>::iterator it = _masterServerPtr->getPorts().begin(); it != _masterServerPtr->getPorts().end(); it++)
-		{
-			close(it->second);
-			std::cout << "Stop listening on port " << it->first << std::endl;
-		}
-        exit(signal);
-    }
-}
+// void MasterServer::signalHandler(int signal)
+// {
+//     if (_masterServerPtr)
+// 	{
+//         const std::map<int, Client *> &clients = _masterServerPtr->getClients();
+//         for (std::map<int, Client *>::const_iterator it = clients.begin(); it != clients.end(); it++)
+// 		{
+//             delete it->second;
+// 			close(it->first);
+// 		}
+// 		std::cout << "iao Bye Bye <3" << std::endl;
+// 		for (std::map<std::string, int>::iterator it = _masterServerPtr->getPorts().begin(); it != _masterServerPtr->getPorts().end(); it++)
+// 		{
+// 			close(it->second);
+// 			std::cout << "Stop listening on port " << it->first << std::endl;
+// 		}
+//         exit(signal);
+//     }
+// }

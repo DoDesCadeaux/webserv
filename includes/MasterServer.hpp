@@ -51,7 +51,7 @@ public:
 
     std::string getResourceContent(const std::string &uri, int fd);
 
-    static void signalHandler(int signal);
+    // static void signalHandler(int signal);
 
     // Fonction pour initialiser le pointeur vers l'instance MasterServer
     static void initializeMasterServer(MasterServer* masterServerPtr);

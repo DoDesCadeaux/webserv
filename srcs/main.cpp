@@ -13,6 +13,6 @@ int main(int argc, char **argv)
 
 	MasterServer::initializeMasterServer(&masterServer);
 
-    signal(SIGINT, MasterServer::signalHandler);
+    // signal(SIGINT, MasterServer::signalHandler);
     masterServer.run();
 }
