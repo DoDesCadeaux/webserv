@@ -455,14 +455,12 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 		std::cout << client.getBodyPayload() << std::endl;
 		return;
 	}
-    if (pipe(pipefd) == -1) {
-        exit(EXIT_FAILURE);
-    }
+    if (pipe(pipefd) == -1)
+		exit(Ft::printErr("pipe failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
 
     pid = fork();
-    if (pid == -1) {
-        exit(EXIT_FAILURE);
-    }
+    if (pid == -1)
+        exit(Ft::printErr("fork failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
 
     if (pid == 0) { // Child process
         alarm(5); // Set a timer for 5 seconds
@@ -488,9 +486,8 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
         close(pipefd[1]);
 
         int pipefd_in[2];
-        if (pipe(pipefd_in) == -1) {
-            exit(EXIT_FAILURE);
-        }
+        if (pipe(pipefd_in) == -1)
+            exit(Ft::printErr("pipe failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
 
         write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
         close(pipefd_in[1]);
@@ -498,8 +495,7 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
         close(pipefd_in[0]);
 
         execve(scriptName.c_str(), const_cast<char* const*>(argv), envp);
-
-        exit(EXIT_FAILURE);
+		exit(Ft::printErr("execve failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
     }
     else { // Parent process
         close(pipefd[1]);
@@ -543,13 +539,9 @@ void MasterServer::saveFile(const int &fd, const std::string &fileData, const st
 	std::string extension = getExtensionFromMimeType(mimeType);
 	// Si le directory path existe pas il faut le créer
 	if (!Ft::fileExists(directoryPath))
-	{
 		if (mkdir(directoryPath.c_str(), 0755) == -1)
-		{
-			std::cerr << "Erreur lors de la création du dossier: " << strerror(errno) << std::endl;
-			exit(EXIT_FAILURE);
-		}
-	}
+			exit(Ft::printErr("mkdir failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
+
 	std::string filePath = directoryPath + "postedFile" + extension;
 
 	_clients[fd]->setLastFilePath(filePath);
@@ -557,10 +549,7 @@ void MasterServer::saveFile(const int &fd, const std::string &fileData, const st
 	std::ofstream fileStream(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
 
 	if (!fileStream)
-	{
-		std::cerr << "Erreur lors de la création du fichier" << std::endl;
-		return;
-	}
+		exit(Ft::printErr("creation @ failed.", "postedFile", EXIT_FAILURE, getPorts(), getClients()));
 
 	fileStream.write(fileData.c_str(), fileData.size());
 
@@ -641,22 +630,22 @@ void MasterServer::killConnection(const int &fd)
 	removeFd(fd);
 }
 
-// void MasterServer::signalHandler(int signal)
-// {
-//     if (_masterServerPtr)
-// 	{
-//         const std::map<int, Client *> &clients = _masterServerPtr->getClients();
-//         for (std::map<int, Client *>::const_iterator it = clients.begin(); it != clients.end(); it++)
-// 		{
-//             delete it->second;
-// 			close(it->first);
-// 		}
-// 		std::cout << "iao Bye Bye <3" << std::endl;
-// 		for (std::map<std::string, int>::iterator it = _masterServerPtr->getPorts().begin(); it != _masterServerPtr->getPorts().end(); it++)
-// 		{
-// 			close(it->second);
-// 			std::cout << "Stop listening on port " << it->first << std::endl;
-// 		}
-//         exit(signal);
-//     }
-// }
+void MasterServer::signalHandler(int signal)
+{
+    if (_masterServerPtr)
+	{
+        const std::map<int, Client *> &clients = _masterServerPtr->getClients();
+        for (std::map<int, Client *>::const_iterator it = clients.begin(); it != clients.end(); it++)
+		{
+            delete it->second;
+			close(it->first);
+		}
+		std::cout << "iao Bye Bye <3" << std::endl;
+		for (std::map<std::string, int>::iterator it = _masterServerPtr->getPorts().begin(); it != _masterServerPtr->getPorts().end(); it++)
+		{
+			close(it->second);
+			std::cout << "Stop listening on port " << it->first << std::endl;
+		}
+        exit(signal);
+    }
+}

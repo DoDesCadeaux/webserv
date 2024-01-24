@@ -21,6 +21,8 @@ class Ft
 public:
 	template <class T>
 	static int printErr(std::string msg, T elem, int err, std::string loc, std::ifstream *file, std::map<std::string, int> ports);
+	template <class T>
+	static int printErr(std::string msg, T elem, int err, std::map<std::string, int> ports, std::map<int, Client *> clients);
 	static void printSet(const fd_set &set, const std::string &name);
 	static void printClient(const std::map<int, Client *> &clients);
 	static bool fileExists(const std::string &filePath);
@@ -66,6 +68,36 @@ int Ft::printErr(std::string msg, T elem, int err, std::string loc, std::ifstrea
 	{
 		close(it->second);
 		std::cout << "Stop listening on port " << it->first << std::endl;
+	}
+	return err;
+}
+
+template <class T>
+int Ft::printErr(std::string msg, T elem, int err, std::map<std::string, int> ports, std::map<int, Client *> clients)
+{
+	std::cout << RED << "error: " << NOCOL;
+	if (!msg.empty())
+	{
+		for (size_t i = 0; i < msg.size(); i++)
+		{
+			if (msg[i] != '@')
+				std::cout << msg[i];
+			else
+				std::cout << elem;
+		}
+	}
+	else
+		std::cout << elem;
+	std::cout << std::endl;
+	for (std::map<std::string, int>::iterator it = ports.begin(); it != ports.end(); it++)
+	{
+		close(it->second);
+		std::cout << "Stop listening on port " << it->first << std::endl;
+	}
+	for (std::map<int, Client *>::const_iterator it = clients.begin(); it != clients.end(); it++)
+	{
+		delete it->second;
+		close(it->first);
 	}
 	return err;
 }
