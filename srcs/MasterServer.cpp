@@ -290,17 +290,14 @@ bool MasterServer::recvAll(const int &fd)
 	while (true)
 	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
-		if (bytesRead > 0)
-		{
-			buffer.insert(buffer.end(), tmp, tmp + bytesRead);
-		}
-		else {
+		if (bytesRead == -1) {
+			HttpResponse response;
+			response.setErrorResponse(500, "Internal Server Error");
 			break;
 		}
-//		for (std::vector<char>::iterator it = buffer.begin(); it != buffer.end(); ++it){
-//			std::cout << *it;
-//		}
-//		std::cout << std::endl;
+		if (bytesRead == 0)
+			break;
+		buffer.insert(buffer.end(), tmp, tmp + bytesRead);
 	}
 
 	if (!buffer.empty())
