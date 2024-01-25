@@ -354,7 +354,6 @@ ssize_t send(const int &fd, const char *buf, size_t len)
     return total;
 }
 
-
 bool MasterServer::sendAll(const int &fd)
 {
 	std::string 	content = "";
@@ -363,7 +362,7 @@ bool MasterServer::sendAll(const int &fd)
 
 	Server server = getServerByClientSocket(fd);
 	if (!server.isAuthorizedProtocol(uri, _clients[fd]->getRequestProtocol()))
-		response.setErrorResponse(401, "Unauthorized");
+		response.setErrorResponse(401, "Unauthorised");
 	else
 	{
 		if (_clients[fd]->getRequestProtocol() == "GET") {
@@ -558,6 +557,7 @@ void MasterServer::saveFile(const int &fd, const std::string &fileData, const st
 
 	fileStream.close();
 }
+
 void MasterServer::addFd(int fd)
 {
 	FD_SET(fd, &_allfds);
