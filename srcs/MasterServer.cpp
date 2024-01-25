@@ -518,9 +518,18 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
         close(pipefd[1]);
 
         std::string output;
-        while (read(pipefd[0], &buf, 1) > 0) {
-            output += buf;
-        }
+		ssize_t     readBytes = read(pipefd[0], &buf, 1);
+		while (true) {
+			if (readBytes == -1) {
+				HttpResponse response;
+				response.setErrorResponse(500, "Internal Server Error");
+				client.setClientResponse(response);
+			}
+			if (readBytes == 0)
+				break;
+			output += buf;
+			readBytes = read(pipefd[0], &buf, 1);
+		}
 
         int status;
         waitpid(pid, &status, 0);
