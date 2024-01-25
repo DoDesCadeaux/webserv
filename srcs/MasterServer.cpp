@@ -220,7 +220,6 @@ void MasterServer::run()
 		_readfds = _allfds;
 		_writefds = _allfds;
 
-		//usleep(5000);
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 		if (res == -1)
 			std::cout << "error" << std::endl;
@@ -242,7 +241,6 @@ void MasterServer::run()
 						if (!recvAll(fd))
 						{
 							fdsToRemove.push_back(fd);
-							std::cout << "Recvall remove : [" << fd << "]" << std::endl;
 							continue;
 						}
 					}
@@ -251,14 +249,10 @@ void MasterServer::run()
 						if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
 						{
 							fdsToRemove.push_back(fd);
-							std::cout << "Sendall remove : [" << fd << "]" << std::endl;
 							continue;
 						}
 						if (!_clients[fd]->isKeepAlive())
-						{
 							fdsToRemove.push_back(fd);
-							std::cout << "KeepAlive remove : [" << fd << "]" << std::endl;
-						}
 						else
 							_clients[fd]->resetKeepAliveTimer();
 					}
@@ -266,14 +260,9 @@ void MasterServer::run()
 			}
 
 			// Gestion des timeouts pour les connexions keep-alive
-			for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
-				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT)) {
+			for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT))
 					fdsToRemove.push_back(it->first);
-					std::cout << "HasKeepAlive remove : [" << it->first << "]" << std::endl;
-				}
-				// Start temps
-				// Si start_time - client_time > 120secondes, alors on push dans les fdsToRemove
-			}
 
 			// Supprimez les clients marqués pour suppression
 			for (size_t i = 0; i < fdsToRemove.size(); ++i)
@@ -323,7 +312,6 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 
 	if (file.is_open())
 	{
-		// tellg() renvoie la position actuelle du pointeur de fichier, qui, dans ce cas, est à la fin du fichier
 		size = file.tellg();
 		file.close();
 	}
@@ -356,9 +344,8 @@ static bool send(const int &fd, const char *buf, size_t len)
         {
 			usleep(5000);
 			i++;
-			if (i < 5){
+			if (i < 5)
 				continue;
-			}
 			break;
         }
         total += n;
@@ -503,10 +490,14 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
         if (pipe(pipefd_in) == -1)
             exit(Ft::printErr("pipe failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
 
-        write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
-        close(pipefd_in[1]);
-        dup2(pipefd_in[0], STDIN_FILENO);
-        close(pipefd_in[0]);
+		ssize_t written = write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
+		if (written == -1)
+			exit(Ft::printErr("write failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
+		else if (written == 0 || written > 0) {
+			close(pipefd_in[1]);
+			dup2(pipefd_in[0], STDIN_FILENO);
+			close(pipefd_in[0]);
+		}
 
         execve(scriptName.c_str(), const_cast<char* const*>(argv), envp);
 		exit(Ft::printErr("execve failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
