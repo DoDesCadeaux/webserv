@@ -5,7 +5,11 @@ import urllib.request
 
 
 def main():
-    arguments = cgi.FieldStorage()
+    try:
+        arguments = cgi.FieldStorage()
+    except TypeError:
+        print("<html><body><p style=\"color: red; font-size: 25px;\">Error: TYPE ERROR.</p></body></html>")
+        return
     if "btc" in arguments:
         try:
             btc = float(arguments["btc"].value)

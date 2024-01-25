@@ -377,7 +377,34 @@ bool MasterServer::sendAll(const int &fd)
 		}
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
-			saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+			std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
+			std::string fullpath = server.getRoot();
+
+			for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
+			{
+				if (it->path == uri)
+				{
+					if (!it->root.empty())
+						fullpath = it->root;
+					if (!it->index.empty())
+						tmp = fullpath + "/" + it->index;
+				}
+				else if (uri.find(it->path + '/') != std::string::npos)
+				{
+
+					if (!it->cgi.empty())
+					{
+						if (!it->root.empty())
+							fullpath = it->root;
+						std::map<std::string, std::string>::iterator script = it->cgi.begin();
+						handleCGIRequest(*_clients[fd], fullpath + "/" + script->second);
+						saveFile(fd, _clients[fd]->getResponseBody(), "text/html");
+						break;
+					}
+				}
+				else
+					saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+			}
 			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 			{
 				std::ifstream file(_clients[fd]->getLastFilePath());
@@ -411,6 +438,11 @@ bool MasterServer::sendAll(const int &fd)
 			} else {
 				response.setDeleteResponse(404, "Not Found");
 			}
+		}
+		else if (_clients[fd]->getRequestProtocol() == "POST" && Ft::endsWith(_clients[fd]->getRequestUri(), ".py")) {
+			std::string scriptName = _clients[fd]->getLastFilePath();
+			handleCGIRequest(*_clients[fd], scriptName);
+			return true;
 		}
 		else
 			response.setErrorResponse(500, "Internal Server Error");
@@ -472,9 +504,18 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 
     if (pid == 0) { // Child process
         alarm(7);
-
+		std::string queryString;
         std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
-        std::string queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
+		if (client.getRequestProtocol() == "GET")
+		{
+			queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
+			std::cout << "QUERY STRING: " << queryString << std::endl;
+		}
+		else if (client.getRequestProtocol() == "POST")
+		{
+			std::cout << "BODY PAYLOAD: " << client.getBodyPayload() << std::endl;
+			queryString = "QUERY_STRING=" + client.getBodyPayload();
+		}
         std::string contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
         std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
         char* envp[] = {
@@ -542,6 +583,7 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
             client.setClientResponse(response);
         }
     }
+	std::cout << "RESPONSE BODY: " << client.getResponseBody() << std::endl;
 }
 
 bool MasterServer::deleteResource(const std::string &resource)
@@ -551,6 +593,8 @@ bool MasterServer::deleteResource(const std::string &resource)
 
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
 {
+	std::cout << "FILEDATA: " << fileData << std::endl;
+	std::cout << "MIMETYPE: " << mimeType << std::endl;
 	// std::string directoryPath = getServerByClientSocket(fd).getLocations();
 	std::string target = _clients[fd]->getRequestUri();
 	Location loc = getServerByClientSocket(fd).getLocationByPath(target);
