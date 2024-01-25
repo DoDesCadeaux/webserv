@@ -2,6 +2,7 @@
 import cgi
 import json
 import urllib.request
+import os
 
 
 def caesar_cipher(text, shift):
@@ -15,10 +16,11 @@ def caesar_cipher(text, shift):
     return encrypted_text
 
 def main():
-    arguments = cgi.FieldStorage()
+    query_string = os.environ.get('QUERY_STRING', '')
+    arguments = urllib.parse.parse_qs(query_string)
     if "phrase" in arguments:
         try:
-            sentence = arguments["phrase"].value
+            sentence = arguments["phrase"][0]
             encrypted_sentence = caesar_cipher(sentence, 3)  # Use a shift of 3 for Caesar cipher
         except ValueError:
             print("<html><body><p style=\"color: green; font-size: 25px;\">Error: The value must be a number.</p></body></html>")

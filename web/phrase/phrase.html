@@ -84,7 +84,12 @@
 </div>
 <div class="container">
     <div class="header">CGI WebServ</div>
-    <form method="get" target=_blank>
+    <form method="post" target=_blank>POST
+        <label for="phrase">Enter a phrase:</label><br>
+        <input type="text" id="phrase" name="phrase"><br>
+        <input type="submit" value="Display">
+    </form>
+    <form method="get" target=_blank>GET
         <label for="phrase">Enter a phrase:</label><br>
         <input type="text" id="phrase" name="phrase"><br>
         <input type="submit" value="Display">

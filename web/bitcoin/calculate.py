@@ -2,17 +2,15 @@
 import cgi
 import json
 import urllib.request
+import os
 
 
 def main():
-    try:
-        arguments = cgi.FieldStorage()
-    except TypeError:
-        print("<html><body><p style=\"color: red; font-size: 25px;\">Error: TYPE ERROR.</p></body></html>")
-        return
+    query_string = os.environ.get('QUERY_STRING', '')
+    arguments = urllib.parse.parse_qs(query_string)
     if "btc" in arguments:
         try:
-            btc = float(arguments["btc"].value)
+            btc = float(arguments["btc"][0])
         except ValueError:
             print("<html><body><p style=\"color: red; font-size: 25px;\">Error: The value must be a number.</p></body></html>")
             return

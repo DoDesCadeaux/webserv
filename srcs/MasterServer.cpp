@@ -244,15 +244,15 @@ void MasterServer::run()
 				}
 				if (FD_ISSET(fd, &_writefds))
 				{
+					if (_clients[fd]->getRequestFormat().empty())
+					{
+						fdsToRemove.push_back(fd);
+						continue;
+					}
 					if (!sendAll(fd)) {
 						HttpResponse response;
 						response.setErrorResponse(500, "Internal Server Error");
 						_clients[fd]->setClientResponse(response);
-						continue;
-					}
-					if (_clients[fd]->getRequestFormat().empty())
-					{
-						fdsToRemove.push_back(fd);
 						continue;
 					}
 					if (!_clients[fd]->isKeepAlive())
@@ -380,6 +380,7 @@ bool MasterServer::sendAll(const int &fd)
 			std::string tmp = Ft::startsWith(uri, "./") ? uri : (Ft::startsWith(uri, "/") ? "." + uri : "./" + uri);
 			std::string fullpath = server.getRoot();
 
+			bool is_cgi = false;
 			for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
 			{
 				if (it->path == uri)
@@ -388,10 +389,6 @@ bool MasterServer::sendAll(const int &fd)
 						fullpath = it->root;
 					if (!it->index.empty())
 						tmp = fullpath + "/" + it->index;
-				}
-				else if (uri.find(it->path + '/') != std::string::npos)
-				{
-
 					if (!it->cgi.empty())
 					{
 						if (!it->root.empty())
@@ -399,11 +396,13 @@ bool MasterServer::sendAll(const int &fd)
 						std::map<std::string, std::string>::iterator script = it->cgi.begin();
 						handleCGIRequest(*_clients[fd], fullpath + "/" + script->second);
 						saveFile(fd, _clients[fd]->getResponseBody(), "text/html");
+						is_cgi = true;
 						break;
 					}
 				}
-				else
-					saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
+			}
+			if (!is_cgi){
+				saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
 			}
 			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 			{
@@ -492,7 +491,6 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 		HttpResponse response;
         response.setErrorResponse(502, "Bad Gateway");
         client.setClientResponse(response);
-		std::cout << client.getBodyPayload() << std::endl;
 		return;
 	}
     if (pipe(pipefd) == -1)
@@ -504,20 +502,20 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 
     if (pid == 0) { // Child process
         alarm(7);
-		std::string queryString;
+		std::string queryString, contentLength;
         std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
+        std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
 		if (client.getRequestProtocol() == "GET")
 		{
 			queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
-			std::cout << "QUERY STRING: " << queryString << std::endl;
+        	contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
 		}
 		else if (client.getRequestProtocol() == "POST")
 		{
-			std::cout << "BODY PAYLOAD: " << client.getBodyPayload() << std::endl;
 			queryString = "QUERY_STRING=" + client.getBodyPayload();
+        	// contentLength = "CONTENT_LENGTH=0";
 		}
-        std::string contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
-        std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
+
         char* envp[] = {
             const_cast<char *>(requestMethod.c_str()),
             const_cast<char *>(queryString.c_str()),
@@ -529,7 +527,6 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 			const_cast<char*>(scriptName.c_str()),
 			NULL
 		};
-
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
         close(pipefd[1]);
@@ -583,7 +580,6 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
             client.setClientResponse(response);
         }
     }
-	std::cout << "RESPONSE BODY: " << client.getResponseBody() << std::endl;
 }
 
 bool MasterServer::deleteResource(const std::string &resource)
@@ -593,8 +589,6 @@ bool MasterServer::deleteResource(const std::string &resource)
 
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
 {
-	std::cout << "FILEDATA: " << fileData << std::endl;
-	std::cout << "MIMETYPE: " << mimeType << std::endl;
 	// std::string directoryPath = getServerByClientSocket(fd).getLocations();
 	std::string target = _clients[fd]->getRequestUri();
 	Location loc = getServerByClientSocket(fd).getLocationByPath(target);
