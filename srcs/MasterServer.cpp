@@ -246,7 +246,13 @@ void MasterServer::run()
 					}
 					if (FD_ISSET(fd, &_writefds))
 					{
-						if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
+						if (!sendAll(fd)) {
+							HttpResponse response;
+							response.setErrorResponse(500, "Internal Server Error");
+							_clients[fd]->setClientResponse(response);
+							continue;
+						}
+						if (_clients[fd]->getRequestFormat().empty())
 						{
 							fdsToRemove.push_back(fd);
 							continue;
@@ -337,21 +343,22 @@ static bool send(const int &fd, const char *buf, size_t len)
     ssize_t n;
 	int i = 0;
 
-    while (total < len)
-    {
-        n = send(fd, buf + total, len - total, 0);
-        if (n <= 0)
-        {
+	while (total < len)
+	{
+		n = send(fd, buf + total, len - total, 0);
+		if (n == -1)
+			break;
+		if (n == 0) {
 			usleep(5000);
 			i++;
-			if (i < 5)
+			if (i < 5){
 				continue;
+			}
 			break;
-        }
-        total += n;
+		}
+		total += n;
 		i = 0;
-
-    }
+	}
 
     return total == len;
 }
