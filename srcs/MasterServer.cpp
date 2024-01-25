@@ -222,58 +222,55 @@ void MasterServer::run()
 
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 		if (res == -1)
-			std::cout << "error" << std::endl;
-		else
-		{
-			std::vector<int> fdsToRemove;
+			continue;
+		std::vector<int> fdsToRemove;
 
-			for (int fd = 0; fd <= _maxfd; ++fd)
+		for (int fd = 0; fd <= _maxfd; ++fd)
+		{
+			if (FD_ISSET(fd, &_readfds))
+			{
+				usleep(500);
+				newConnection(fd);
+			}
+			if (_clients.find(fd) != _clients.end())
 			{
 				if (FD_ISSET(fd, &_readfds))
 				{
-					usleep(500);
-					newConnection(fd);
+					if (!recvAll(fd))
+					{
+						fdsToRemove.push_back(fd);
+						continue;
+					}
 				}
-				if (_clients.find(fd) != _clients.end())
+				if (FD_ISSET(fd, &_writefds))
 				{
-					if (FD_ISSET(fd, &_readfds))
-					{
-						if (!recvAll(fd))
-						{
-							fdsToRemove.push_back(fd);
-							continue;
-						}
+					if (!sendAll(fd)) {
+						HttpResponse response;
+						response.setErrorResponse(500, "Internal Server Error");
+						_clients[fd]->setClientResponse(response);
+						continue;
 					}
-					if (FD_ISSET(fd, &_writefds))
+					if (_clients[fd]->getRequestFormat().empty())
 					{
-						if (!sendAll(fd)) {
-							HttpResponse response;
-							response.setErrorResponse(500, "Internal Server Error");
-							_clients[fd]->setClientResponse(response);
-							continue;
-						}
-						if (_clients[fd]->getRequestFormat().empty())
-						{
-							fdsToRemove.push_back(fd);
-							continue;
-						}
-						if (!_clients[fd]->isKeepAlive())
-							fdsToRemove.push_back(fd);
-						else
-							_clients[fd]->resetKeepAliveTimer();
+						fdsToRemove.push_back(fd);
+						continue;
 					}
+					if (!_clients[fd]->isKeepAlive())
+						fdsToRemove.push_back(fd);
+					else
+						_clients[fd]->resetKeepAliveTimer();
 				}
 			}
-
-			// Gestion des timeouts pour les connexions keep-alive
-			for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT))
-					fdsToRemove.push_back(it->first);
-
-			// Supprimez les clients marqués pour suppression
-			for (size_t i = 0; i < fdsToRemove.size(); ++i)
-				killConnection(fdsToRemove[i]);
 		}
+
+		// Gestion des timeouts pour les connexions keep-alive
+		for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+			if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT))
+				fdsToRemove.push_back(it->first);
+
+		// Supprimez les clients marqués pour suppression
+		for (size_t i = 0; i < fdsToRemove.size(); ++i)
+			killConnection(fdsToRemove[i]);
 	}
 }
 
@@ -351,9 +348,8 @@ static bool send(const int &fd, const char *buf, size_t len)
 		if (n == 0) {
 			usleep(5000);
 			i++;
-			if (i < 5){
+			if (i < 5)
 				continue;
-			}
 			break;
 		}
 		total += n;
@@ -371,7 +367,9 @@ bool MasterServer::sendAll(const int &fd)
 
 	Server server = getServerByClientSocket(fd);
 	if (!server.isAuthorizedProtocol(uri, _clients[fd]->getRequestProtocol()))
-		response.setErrorResponse(401, "Unauthorised");
+		response.setErrorResponse(405, "Method Not Allowed");
+	else if (_clients[fd]->getRequestProtocol() != "GET" && _clients[fd]->getRequestProtocol() != "POST" && _clients[fd]->getRequestProtocol() != "DELETE")
+		response.setErrorResponse(501, "Not Implemented");
 	else
 	{
 		if (_clients[fd]->getRequestProtocol() == "GET") {
@@ -394,7 +392,7 @@ bool MasterServer::sendAll(const int &fd)
 					std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
 			}
 			else
-				response.setErrorResponse(401, "Unauthorized");
+				response.setErrorResponse(413, "Payload Too Large");
 		}
 		else if (_clients[fd]->getRequestProtocol() == "DELETE") {
 			std::string resource = _clients[fd]->getRequestUri();
@@ -414,6 +412,8 @@ bool MasterServer::sendAll(const int &fd)
 				response.setDeleteResponse(404, "Not Found");
 			}
 		}
+		else
+			response.setErrorResponse(500, "Internal Server Error");
 	}
 	if (content.empty())
 	{
@@ -421,14 +421,14 @@ bool MasterServer::sendAll(const int &fd)
 			Server server = getServerByClientSocket(fd);
 			for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
 			{
-				if (it->first == 404 && response.getStatusCode() != 401)
+				if (it->first == 404 && response.getStatusCode() != 413 && response.getStatusCode() != 405 && response.getStatusCode() != 501 && response.getStatusCode() != 500)
 				{
 					content = getResourceContent(it->second, fd);
 					response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
 					break;
 				}
 			}
-			if (content.empty() && response.getStatusCode() != 401)
+			if (content.empty() && response.getStatusCode() != 413 && response.getStatusCode() != 405 && response.getStatusCode() != 501 && response.getStatusCode() != 500)
 				response.setErrorResponse(404, "Not Found");
 		}
 	}
@@ -471,7 +471,7 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
         exit(Ft::printErr("fork failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
 
     if (pid == 0) { // Child process
-        alarm(5); // Set a timer for 5 seconds
+        alarm(7);
 
         std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
         std::string queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
@@ -614,7 +614,6 @@ void MasterServer::newConnection(const int &listen_fd)
 
 	Ft::printLogs(getServerBySocketPort(listen_fd), *_clients[newfd], CONNEXION);
 	FD_CLR(listen_fd, &_readfds);
-	std::cout << "FD: [" << newfd << "]" << std::endl;
 }
 
 void MasterServer::removeFd(int fd)

@@ -65,7 +65,9 @@ Location &Server::getLocationByPath(const std::string &path)
 {
 	for (std::vector<Location>::iterator it = _locations.begin(); it != _locations.end(); it++)
 	{
-		if (it->path == path)
+		if (path.find(it->path + '/') != std::string::npos)
+			return *it;
+		if (path == it->path)
 			return *it;
 	}
 	throw std::runtime_error("Location not found");
