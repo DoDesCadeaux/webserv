@@ -220,6 +220,7 @@ void MasterServer::run()
 		_readfds = _allfds;
 		_writefds = _allfds;
 
+		//usleep(5000);
 		res = select(_maxfd + 1, &_readfds, &_writefds, NULL, &timeout);
 		if (res == -1)
 			std::cout << "error" << std::endl;
@@ -241,6 +242,7 @@ void MasterServer::run()
 						if (!recvAll(fd))
 						{
 							fdsToRemove.push_back(fd);
+							std::cout << "Recvall remove : [" << fd << "]" << std::endl;
 							continue;
 						}
 					}
@@ -249,10 +251,14 @@ void MasterServer::run()
 						if (_clients[fd]->getRequestFormat().empty() || !sendAll(fd))
 						{
 							fdsToRemove.push_back(fd);
+							std::cout << "Sendall remove : [" << fd << "]" << std::endl;
 							continue;
 						}
 						if (!_clients[fd]->isKeepAlive())
+						{
 							fdsToRemove.push_back(fd);
+							std::cout << "KeepAlive remove : [" << fd << "]" << std::endl;
+						}
 						else
 							_clients[fd]->resetKeepAliveTimer();
 					}
@@ -260,9 +266,14 @@ void MasterServer::run()
 			}
 
 			// Gestion des timeouts pour les connexions keep-alive
-			for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT))
+			for (std::map<int, Client *>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+				if (it->second->isKeepAlive() && it->second->hasKeepAliveTimedOut(KEEP_ALIVE_TIMEOUT)) {
 					fdsToRemove.push_back(it->first);
+					std::cout << "HasKeepAlive remove : [" << it->first << "]" << std::endl;
+				}
+				// Start temps
+				// Si start_time - client_time > 120secondes, alors on push dans les fdsToRemove
+			}
 
 			// Supprimez les clients marqués pour suppression
 			for (size_t i = 0; i < fdsToRemove.size(); ++i)
@@ -280,9 +291,16 @@ bool MasterServer::recvAll(const int &fd)
 	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
 		if (bytesRead > 0)
+		{
 			buffer.insert(buffer.end(), tmp, tmp + bytesRead);
-		else
+		}
+		else {
 			break;
+		}
+//		for (std::vector<char>::iterator it = buffer.begin(); it != buffer.end(); ++it){
+//			std::cout << *it;
+//		}
+//		std::cout << std::endl;
 	}
 
 	if (!buffer.empty())
@@ -328,7 +346,7 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 	return true;
 }
 
-ssize_t send(const int &fd, const char *buf, size_t len)
+static bool send(const int &fd, const char *buf, size_t len)
 {
     size_t total = 0;
     ssize_t n;
@@ -351,7 +369,7 @@ ssize_t send(const int &fd, const char *buf, size_t len)
 
     }
 
-    return total;
+    return total == len;
 }
 
 bool MasterServer::sendAll(const int &fd)
@@ -435,9 +453,9 @@ bool MasterServer::sendAll(const int &fd)
 	FD_CLR(fd, &_writefds);
 
 	// Utilisation de sendall pour envoyer toutes les données
-    ssize_t n = send(fd, response.getResponse().c_str(), response.getResponse().length());
+	bool n = send(fd, response.getResponse().c_str(), response.getResponse().length());
 	Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], RESPONSE);
-	return (n == -1);
+	return (n);
 }
 
 void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
@@ -592,6 +610,7 @@ void MasterServer::newConnection(const int &listen_fd)
 
 	Ft::printLogs(getServerBySocketPort(listen_fd), *_clients[newfd], CONNEXION);
 	FD_CLR(listen_fd, &_readfds);
+	std::cout << "FD: [" << newfd << "]" << std::endl;
 }
 
 void MasterServer::removeFd(int fd)

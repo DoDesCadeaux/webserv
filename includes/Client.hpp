@@ -1,6 +1,6 @@
 #ifndef CLIENT_HPP
 # define CLIENT_HPP
-# define KEEP_ALIVE_TIMEOUT 5
+# define KEEP_ALIVE_TIMEOUT 60
 
 #include <iostream>
 #include <sys/socket.h>

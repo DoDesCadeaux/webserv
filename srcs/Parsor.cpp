@@ -240,6 +240,7 @@ void setSocket(MasterServer &masterServer, Server &server, std::string port, std
     masterServer.addFd(server_fd);
     masterServer.getPorts().insert(std::make_pair(port, server_fd));
     std::cout << "Listening on port " << port << std::endl;
+	std::cout << "ServerFD: [" << server_fd << "]" << std::endl;
 }
 
 std::string getPath(std::istringstream &iss, std::ifstream *inputFile, MasterServer masterServer)
