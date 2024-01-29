@@ -148,6 +148,11 @@ std::string MasterServer::getResourceContent(const std::string &uri, int fd)
 					fullpath = it->root;
 				std::map<std::string, std::string>::iterator script = it->cgi.begin();
 				handleCGIRequest(*_clients[fd], fullpath + "/" + script->second);
+				if (_clients[fd]->getResponseBody().empty()){
+					HttpResponse response;
+					response.setErrorResponse(500, "Internal Server Error: the server encountered an internal error probably due to an invalid syntax.");
+            		_clients[fd]->setClientResponse(response);
+				}
 				return (_clients[fd]->getResponseBody());
 			}
 		}
@@ -250,9 +255,7 @@ void MasterServer::run()
 						continue;
 					}
 					if (!sendAll(fd)) {
-						HttpResponse response;
-						response.setErrorResponse(500, "Internal Server Error");
-						_clients[fd]->setClientResponse(response);
+						fdsToRemove.push_back(fd);
 						continue;
 					}
 					if (!_clients[fd]->isKeepAlive())
@@ -283,8 +286,11 @@ bool MasterServer::recvAll(const int &fd)
 	{
 		bytesRead = recv(fd, tmp, BUFFER_SIZE, 0);
 		if (bytesRead == -1) {
-			HttpResponse response;
-			response.setErrorResponse(500, "Internal Server Error");
+			if (buffer.empty()){
+				HttpResponse response;
+				response.setErrorResponse(500, "Internal Server Error");
+				return false;
+			}
 			break;
 		}
 		if (bytesRead == 0)
@@ -395,6 +401,11 @@ bool MasterServer::sendAll(const int &fd)
 							fullpath = it->root;
 						std::map<std::string, std::string>::iterator script = it->cgi.begin();
 						handleCGIRequest(*_clients[fd], fullpath + "/" + script->second);
+						if (_clients[fd]->getResponseBody().empty()){
+							HttpResponse response;
+							response.setErrorResponse(500, "Internal Server Error: the server encountered an internal error probably due to an invalid syntax.");
+            				_clients[fd]->setClientResponse(response);
+						}
 						saveFile(fd, _clients[fd]->getResponseBody(), "text/html");
 						is_cgi = true;
 						break;
@@ -557,6 +568,7 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 				HttpResponse response;
 				response.setErrorResponse(500, "Internal Server Error");
 				client.setClientResponse(response);
+				break;
 			}
 			if (readBytes == 0)
 				break;
@@ -567,11 +579,11 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
         int status;
         waitpid(pid, &status, 0);
 
-        if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
+        if ((WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM)) {
             // Handle error: The child process was terminated by a SIGALRM signal
-            // This means the Python CGI script was running for too long (more than 5 seconds)
-            HttpResponse response;
-            response.setNormalResponse(500, "Internal Server Error", "The server encountered an internal error. Probably an INFINITE LOOP", "text/html", client.getLastFilePath());
+            // This means the Python CGI script was running for too long (more than 7 seconds)
+			HttpResponse response;
+			response.setErrorResponse(500, "Internal Server Error: the server encountered an internal error probably due to an infinite loop.");
             client.setClientResponse(response);
         }
         else {
