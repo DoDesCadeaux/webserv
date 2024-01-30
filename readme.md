@@ -1,1 +1,1 @@
-School Project Web server in C++98 for 42
+Project Web server in C++98 for 42
