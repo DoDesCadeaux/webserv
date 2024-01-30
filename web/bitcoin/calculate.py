@@ -9,8 +9,8 @@ def main():
     query_string = os.environ.get('QUERY_STRING', '')
     arguments = urllib.parse.parse_qs(query_string)
     # fsdfsdf
-    while True:
-        i=2
+    # while True:
+    #     i=2
     if "btc" in arguments:
         try:
             btc = float(arguments["btc"][0])

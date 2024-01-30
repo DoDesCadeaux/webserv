@@ -380,6 +380,7 @@ bool MasterServer::sendAll(const int &fd)
 	{
 		if (_clients[fd]->getRequestProtocol() == "GET") {
 			content = getResourceContent(uri, fd);
+			//check du bool du client
 		}
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
@@ -452,6 +453,7 @@ bool MasterServer::sendAll(const int &fd)
 		else if (_clients[fd]->getRequestProtocol() == "POST" && Ft::endsWith(_clients[fd]->getRequestUri(), ".py")) {
 			std::string scriptName = _clients[fd]->getLastFilePath();
 			handleCGIRequest(*_clients[fd], scriptName);
+			//Check du bool du client
 			return true;
 		}
 		else
@@ -488,6 +490,7 @@ bool MasterServer::sendAll(const int &fd)
 	// Utilisation de sendall pour envoyer toutes les données
 	bool n = send(fd, response.getResponse().c_str(), response.getResponse().length());
 	Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], RESPONSE);
+	//Check du bool client
 	return (n);
 }
 
@@ -513,24 +516,17 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 
     if (pid == 0) { // Child process
         alarm(7);
-		std::string queryString, contentLength;
+		std::string queryString;
         std::string requestMethod = "REQUEST_METHOD=" + client.getRequestProtocol();
         std::string contentType = "CONTENT_TYPE=" + client.getHeaderTypeValue("Content-Type");
 		if (client.getRequestProtocol() == "GET")
-		{
 			queryString = "QUERY_STRING=" + client.getRequestUri().substr(pos + 1);
-        	contentLength = "CONTENT_LENGTH=" + std::to_string(client.getBodyPayload().size());
-		}
 		else if (client.getRequestProtocol() == "POST")
-		{
 			queryString = "QUERY_STRING=" + client.getBodyPayload();
-        	// contentLength = "CONTENT_LENGTH=0";
-		}
 
         char* envp[] = {
             const_cast<char *>(requestMethod.c_str()),
             const_cast<char *>(queryString.c_str()),
-            const_cast<char *>(contentLength.c_str()),
             const_cast<char *>(contentType.c_str()),
             NULL
         };
@@ -547,8 +543,9 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
             exit(Ft::printErr("pipe failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
 
 		ssize_t written = write(pipefd_in[1], client.getBodyPayload().c_str(), client.getBodyPayload().size());
-		if (written == -1)
-			exit(Ft::printErr("write failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
+		if (written == -1){
+			exit(EXIT_FAILURE);
+		}
 		else if (written == 0 || written > 0) {
 			close(pipefd_in[1]);
 			dup2(pipefd_in[0], STDIN_FILENO);
@@ -556,7 +553,7 @@ void MasterServer::handleCGIRequest(Client &client, std::string scriptName) {
 		}
 
         execve(scriptName.c_str(), const_cast<char* const*>(argv), envp);
-		exit(Ft::printErr("execve failed.", NULL, EXIT_FAILURE, getPorts(), getClients()));
+		exit(EXIT_FAILURE);
     }
     else { // Parent process
         close(pipefd[1]);
