@@ -324,8 +324,7 @@ static bool bodySizeIsValid(Server server, std::string uri, std::string filePath
 		size = file.tellg();
 		file.close();
 	}
-	else
-		std::cout << "Impossible d'ouvrir le fichier." << std::endl;
+	
 
 	for (std::vector<Location>::iterator it = server.getLocations().begin(); it != server.getLocations().end(); it++)
 	{
@@ -380,7 +379,9 @@ bool MasterServer::sendAll(const int &fd)
 	{
 		if (_clients[fd]->getRequestProtocol() == "GET") {
 			content = getResourceContent(uri, fd);
-			//check du bool du client
+			response = _clients[fd]->getObjResponse();
+			if (response.getStatusCode() == 500)
+				std::cout << "CONTENT: " << content  << std::endl;
 		}
 		else if (_clients[fd]->getRequestProtocol() == "POST")
 		{
@@ -402,20 +403,24 @@ bool MasterServer::sendAll(const int &fd)
 							fullpath = it->root;
 						std::map<std::string, std::string>::iterator script = it->cgi.begin();
 						handleCGIRequest(*_clients[fd], fullpath + "/" + script->second);
+						is_cgi = true;
 						if (_clients[fd]->getResponseBody().empty()){
-							HttpResponse response;
 							response.setErrorResponse(500, "Internal Server Error: the server encountered an internal error probably due to an invalid syntax.");
             				_clients[fd]->setClientResponse(response);
 						}
-						saveFile(fd, _clients[fd]->getResponseBody(), "text/html");
-						is_cgi = true;
+						else{
+							if (_clients[fd]->getResponseStatusCode() != 500)
+								saveFile(fd, _clients[fd]->getResponseBody(), "text/html");
+							else
+								response = _clients[fd]->getObjResponse();
+						}
 						break;
 					}
 				}
 			}
-			if (!is_cgi){
+			if (!is_cgi)
 				saveFile(fd, _clients[fd]->getBodyPayload(), _clients[fd]->getHeaderTypeValue("Content-Type"));
-			}
+			
 			if (bodySizeIsValid(getServerByClientSocket(fd), uri, _clients[fd]->getLastFilePath()))
 			{
 				std::ifstream file(_clients[fd]->getLastFilePath());
@@ -426,8 +431,7 @@ bool MasterServer::sendAll(const int &fd)
 						content += line + "\r\n";
 					file.close();
 				}
-				else
-					std::cerr << "Impossible d'ouvrir le fichier" << std::endl;
+				
 			}
 			else
 				response.setErrorResponse(413, "Payload Too Large");
@@ -453,7 +457,6 @@ bool MasterServer::sendAll(const int &fd)
 		else if (_clients[fd]->getRequestProtocol() == "POST" && Ft::endsWith(_clients[fd]->getRequestUri(), ".py")) {
 			std::string scriptName = _clients[fd]->getLastFilePath();
 			handleCGIRequest(*_clients[fd], scriptName);
-			//Check du bool du client
 			return true;
 		}
 		else
@@ -465,7 +468,7 @@ bool MasterServer::sendAll(const int &fd)
 			Server server = getServerByClientSocket(fd);
 			for (std::map<int, std::string>::iterator it = server.getErrorPages().begin(); it != server.getErrorPages().end(); it++)
 			{
-				if (it->first == 404 && response.getStatusCode() != 413 && response.getStatusCode() != 405 && response.getStatusCode() != 501 && response.getStatusCode() != 500)
+				if (it->first == 404 && response.getStatusCode() != 413 && response.getStatusCode() != 405 && response.getStatusCode() != 501 && response.getStatusCode() != 500 )
 				{
 					content = getResourceContent(it->second, fd);
 					response.setNormalResponse(it->first, "Not Found", content, getMimeType(it->second), it->second);
@@ -479,9 +482,9 @@ bool MasterServer::sendAll(const int &fd)
 	else
 	{
 		std::string mimeType = getMimeType(uri);
-		if (_clients[fd]->getRequestProtocol() == "GET")
+		if (_clients[fd]->getRequestProtocol() == "GET" && response.getStatusCode() != 500)
 			response.setNormalResponse(200, "OK", content, mimeType, _clients[fd]->getLastFilePath());
-		else if (_clients[fd]->getRequestProtocol() == "POST")
+		else if (_clients[fd]->getRequestProtocol() == "POST" && _clients[fd]->getResponseStatusCode() != 500)
 			response.setNormalResponse(302, "Found", content, mimeType, _clients[fd]->getLastFilePath());
 	}
 	_clients[fd]->setClientResponse(response);
@@ -490,7 +493,6 @@ bool MasterServer::sendAll(const int &fd)
 	// Utilisation de sendall pour envoyer toutes les données
 	bool n = send(fd, response.getResponse().c_str(), response.getResponse().length());
 	Ft::printLogs(getServerByClientSocket(fd), *_clients[fd], RESPONSE);
-	//Check du bool client
 	return (n);
 }
 
@@ -598,7 +600,6 @@ bool MasterServer::deleteResource(const std::string &resource)
 
 void MasterServer::saveFile(const int &fd, const std::string &fileData, const std::string &mimeType)
 {
-	// std::string directoryPath = getServerByClientSocket(fd).getLocations();
 	std::string target = _clients[fd]->getRequestUri();
 	Location loc = getServerByClientSocket(fd).getLocationByPath(target);
 

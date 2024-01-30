@@ -36,6 +36,7 @@ public:
 	std::string 	getHeaderTypeValue(const std::string &headertype) const;
 
 	const std::string &getResponse() const;
+	const HttpResponse &getObjResponse() const;
 	const int		&getResponseStatusCode () const;
 	const std::string &getResponseStatusMsg() const;
 	const std::string &getResponseBody() const;

@@ -22,6 +22,7 @@ private:
 public:
 	HttpResponse();
 	~HttpResponse();
+	HttpResponse &operator=(const HttpResponse &other);
 
 	void	setNormalResponse(int statuscode, const std::string &statusmessage, const std::string &bodyContent, const std::string &mimeType, const std::string &lastfile);
 	void	setErrorResponse(int statuscode, const std::string &statusmessage);

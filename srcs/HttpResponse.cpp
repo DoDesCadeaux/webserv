@@ -6,6 +6,20 @@ HttpResponse::HttpResponse() {
 
 HttpResponse::~HttpResponse() {}
 
+HttpResponse &HttpResponse::operator=(const HttpResponse &other){
+	if (this != &other)
+	{
+		_statuscode = other._statuscode;
+		_length = other._length;
+		_statusmessage = other._statusmessage;
+		_response = other._response;
+		_body = other._body;
+	}
+
+	return *this;
+}
+
+
 void HttpResponse::setDeleteResponse(int statusCode, const std::string &statusText)
 {
 	_statuscode = statusCode;

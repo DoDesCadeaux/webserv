@@ -81,6 +81,10 @@ const std::string &Client::getResponse() const{
 	return _clientresponse.getResponse();
 }
 
+const HttpResponse &Client::getObjResponse() const{
+	return _clientresponse;
+}
+
 const int		&Client::getResponseStatusCode () const{
 	return _clientresponse.getStatusCode();
 }
